@@ -146,6 +146,32 @@ Outcome: Policies are portable, unambiguous, and safely validated because GateKe
 - Local: docker‑compose (FastAPI, Redis, Postgres, Prometheus, Grafana, Studio, MCP server).
 - Staging/Prod: containerized services; Postgres managed; Redis single‑node or small cluster.
 
+#### Local Run (no Docker)
+- macOS (Apple Silicon/M3)
+```
+brew install redis
+brew services start redis
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+export REDIS_URL=redis://localhost:6379/0
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/gatekeeper  # optional
+uvicorn backend.app.main:app --reload
+```
+
+- Windows (PowerShell)
+```
+winget install Redis.Redis
+# Start Redis server from Start Menu or redis-server.exe
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+$env:REDIS_URL = "redis://localhost:6379/0"
+$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/gatekeeper"  # optional
+uvicorn backend.app.main:app --reload
+```
+Then open `http://localhost:8000/health` and `POST /v1/enforce`.
+
 ### 15) MVP Scope (4–6 weeks)
 - Enforcement service with 4 hooks; actions: block, rewrite, redact(regex), enforce(citations, min_confidence).
 - YAML policy loader, deterministic evaluator, and `schema.yaml` validation.

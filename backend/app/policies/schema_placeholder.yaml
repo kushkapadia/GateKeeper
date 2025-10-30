@@ -1,0 +1,15 @@
+user_attributes:
+  - name: role
+    type: string
+  - name: department
+    type: string
+  - name: clearance
+    type: integer
+
+doc_metadata:
+  - name: tags
+    type: list[string]
+  - name: sensitivity
+    type: string
+
+

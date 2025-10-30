@@ -1,0 +1,29 @@
+version: '3.9'
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: gatekeeper
+    ports:
+      - "5432:5432"
+  api:
+    build: .
+    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/gatekeeper
+      - POLICY_VERSION=v0
+    depends_on:
+      - redis
+      - postgres
+    ports:
+      - "8000:8000"
+
