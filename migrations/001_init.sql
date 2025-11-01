@@ -4,14 +4,15 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS tenants (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS policies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   labels JSONB NOT NULL DEFAULT '{}',
   created_by TEXT,
@@ -34,7 +35,7 @@ CREATE TABLE IF NOT EXISTS policy_versions (
 
 CREATE TABLE IF NOT EXISTS schema_descriptors (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   version TEXT NOT NULL,
   descriptor JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -44,7 +45,7 @@ CREATE TABLE IF NOT EXISTS schema_descriptors (
 -- Lightweight audit index (metadata only). Raw events can live in object store/files.
 CREATE TABLE IF NOT EXISTS audit_index (
   audit_id TEXT PRIMARY KEY,
-  tenant_id TEXT NOT NULL,
+  tenant_id UUID NOT NULL,
   correlation_id TEXT,
   ts TIMESTAMPTZ NOT NULL,
   stage TEXT NOT NULL,
@@ -70,7 +71,7 @@ CREATE TABLE IF NOT EXISTS studio_users (
 -- Analytics snapshots (precomputed aggregates for fast dashboards)
 CREATE TABLE IF NOT EXISTS analytics_snapshots (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id TEXT NOT NULL,
+  tenant_id UUID NOT NULL,
   window_start TIMESTAMPTZ NOT NULL,
   window_end TIMESTAMPTZ NOT NULL,
   kind TEXT NOT NULL,        -- e.g., blocks_by_policy
@@ -80,7 +81,7 @@ CREATE TABLE IF NOT EXISTS analytics_snapshots (
 -- Test suites storage for MCP policy:test
 CREATE TABLE IF NOT EXISTS policy_test_suites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id TEXT NOT NULL,
+  tenant_id UUID NOT NULL,
   name TEXT NOT NULL,
   content JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

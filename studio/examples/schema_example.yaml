@@ -1,0 +1,151 @@
+# GateKeeper Schema Descriptor
+# This file defines tenant-specific attributes and metadata that GateKeeper will use
+# for policy enforcement. Standard GateKeeper fields are always available (see below).
+
+# ==============================================================================
+# TENANT-SPECIFIC USER ATTRIBUTES
+# These define what attributes are available in the 'user' context object.
+# Your RAG client must send these attributes in the EnforcementRequest.user field.
+# ==============================================================================
+user_attributes:
+  - name: role
+    type: string
+    example: "Doctor, Nurse, Admin, Intern, Analyst, Manager"
+    description: "User's role in the organization"
+  
+  - name: department
+    type: string
+    example: "Cardiology, HR, Finance, IT"
+    description: "User's department"
+  
+  - name: clearance
+    type: integer
+    example: "1,2,3,4,5"
+    description: "Security clearance level (1=lowest, 5=highest)"
+
+# ==============================================================================
+# TENANT-SPECIFIC DOCUMENT METADATA
+# These define what metadata fields are available inside chunk.metadata.* and
+# answer.sources.metadata.* objects.
+# Your RAG indexing pipeline must attach these metadata fields to chunks.
+# ==============================================================================
+doc_metadata:
+  - name: tags
+    type: list[string]
+    example: '["salary", "policy", "confidential", "public"]'
+    description: "Tags associated with the document/chunk"
+  
+  - name: sensitivity
+    type: string
+    example: "public, restricted, confidential"
+    description: "Sensitivity classification level"
+  
+  - name: department
+    type: string
+    example: "HR, Finance, IT"
+    description: "Department that owns the document"
+  
+  - name: owner
+    type: string
+    example: "hr_team, finance_team"
+    description: "Owner or team responsible for the document"
+  
+  - name: created_at
+    type: timestamp
+    example: "2025-01-15T10:30:00Z"
+    description: "Document creation timestamp"
+
+# ==============================================================================
+# STANDARD GATEKEEPER CONTRACT FIELDS (ALWAYS AVAILABLE)
+# These fields are PROVIDED BY YOUR RAG CLIENT when calling GateKeeper.
+# They are part of the standard GateKeeper API contract - you do NOT need to
+# define them in your descriptor, but you MUST send them in EnforcementRequest.
+# ==============================================================================
+#
+# PRE-QUERY STAGE:
+#   Your client must send in EnforcementRequest.request:
+#   - query.text: string (required: the user's raw query text)
+#   - query.intent: string (optional: "retrieval", "question", "command")
+#
+#   Example request:
+#   {
+#     "stage": "pre_query",
+#     "user": {"role": "intern", "department": "HR"},
+#     "request": {
+#       "query": {"text": "What is the CEO's salary?", "intent": "question"}
+#     }
+#   }
+#
+# PRE-RETRIEVAL STAGE:
+#   Your client must send in EnforcementRequest.request:
+#   - request.filters: dict (metadata filters for vector search, e.g., {"department": "HR"})
+#   - request.top_k: integer (number of chunks to retrieve)
+#   - request.index: string (optional: which index/collection to search)
+#
+#   Example request:
+#   {
+#     "stage": "pre_retrieval",
+#     "user": {"role": "manager", "department": "Finance"},
+#     "request": {
+#       "filters": {"department": "Finance"},
+#       "top_k": 10,
+#       "index": "company_docs"
+#     }
+#   }
+#
+# POST-RETRIEVAL STAGE:
+#   Your client must send in EnforcementRequest.artifacts.retrieved_chunks[]:
+#   - chunk.text: string (the chunk content)
+#   - chunk.tags: list[string] (generic tags, if any)
+#   - chunk.metadata.*: dict (tenant-specific fields from doc_metadata above)
+#     Example: chunk.metadata.tags, chunk.metadata.sensitivity, etc.
+#
+#   Example request:
+#   {
+#     "stage": "post_retrieval",
+#     "user": {"role": "analyst", "clearance": 2},
+#     "request": {},
+#     "artifacts": {
+#       "retrieved_chunks": [
+#         {
+#           "text": "Employee salary details...",
+#           "metadata": {
+#             "tags": ["salary", "confidential"],
+#             "sensitivity": "restricted",
+#             "department": "HR"
+#           }
+#         }
+#       ]
+#     }
+#   }
+#
+# POST-GENERATION STAGE:
+#   Your client must send in EnforcementRequest.artifacts.answer:
+#   - answer.text: string (the generated answer text)
+#   - answer.citations: list[string] (source chunk IDs/URLs)
+#   - answer.confidence: float (optional: 0.0-1.0, if available from LLM)
+#   - answer.tokens: integer (optional: token count, if available)
+#   - answer.sources.metadata.*: dict (metadata from source chunks)
+#
+#   Example request:
+#   {
+#     "stage": "post_generation",
+#     "user": {"role": "intern"},
+#     "request": {},
+#     "artifacts": {
+#       "answer": {
+#         "text": "The CEO's compensation is...",
+#         "citations": ["chunk_123", "chunk_456"],
+#         "confidence": 0.85,
+#         "tokens": 150
+#       }
+#     }
+#   }
+#
+# IMPORTANT:
+# - These fields are PROVIDED BY YOUR CLIENT (the RAG system calling GateKeeper)
+# - GateKeeper RECEIVES them and evaluates policies against them
+# - GateKeeper RETURNS policyContext (distilled prompt) and decision/actions
+# - Your client is responsible for sending the correct structure at each stage
+# ==============================================================================
+
