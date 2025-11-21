@@ -48,10 +48,14 @@ if ($DatabaseUrl -match "^postgresql://") {
         $authPart = $matches[1]
         $rest = $matches[2]
         
-        if ($authPart -match "^([^:]+):(.+)$") {
-            # Has password (may be empty)
+        if ($authPart -match "^([^:]+):(.*)$") {
+            # Has colon (password may be empty)
             $username = $matches[1]
             $password = $matches[2]
+            # If password is empty string, set to $null
+            if ([string]::IsNullOrEmpty($password)) {
+                $password = $null
+            }
         } else {
             # No password, just username
             $username = $authPart
