@@ -64,31 +64,53 @@ sequenceDiagram
 ### 3) Context Awareness (Schema + Runtime)
 ```mermaid
 flowchart TB
-  SD[schema.yaml (descriptor)] -->|valid fields| LINT[policy:lint]
-  SD -->|drives| UI[Studio Autocomplete]
-  subgraph Runtime
-    UC[user_ctx]
-    RC[request_ctx]
-    DC[doc.metadata]
+  SD[schema.yaml descriptor] -->|save| DB[(schema_descriptors DB)]
+  DB -->|fetch paths| VAL[Validator/Linter]
+  DB -->|fetch| UI[Studio Autocomplete]
+  
+  POL[Policies YAML/JSON] -->|validate| VAL
+  VAL -->|check fields| DB
+  VAL -->|validated| PR[Policy Registry]
+  
+  subgraph Runtime[Runtime Context]
+    UC[user_ctx<br/>user.role, user.department]
+    RC[request_ctx<br/>request.query]
+    DC[doc.metadata<br/>doc.metadata.tags]
   end
-  A2[Policies (YAML/JSON)] --> LINT
-  LINT --> PR[Policy Registry]
-  UC --> ENF[GateKeeper Enforcement]
+  
+  UC -->|validate| VAL
+  RC -->|validate| VAL
+  DC -->|validate| VAL
+  
+  UC --> ENF[Enforcement API]
   RC --> ENF
   DC --> ENF
-  PR --> ENF
+  PR -->|evaluate| ENF
+  
+  PR -->|distilled_prompts| CB[Context Builder]
+  CB -->|policyContext| ENF
   ENF --> OBS[Audit + Metrics]
 ```
 
 ### 4) Risky Users Analytics (Top-N)
 ```mermaid
-flowchart LR
-  ENF[Enforcement] --> Evt[Audit Event]
-  ENF --> RC[Redis Counters (blocks, attacks)]
-  Evt --> IDX[Audit Index (Postgres)]
-  RC --> API[/Analytics API/]
-  IDX --> API
-  API --> UI[Studio Dashboard]
+flowchart TB
+  ENF[Enforcement API] -->|decision=block| RC[Redis Counters<br/>user:blocks:{user_id}<br/>user:attacks:{user_id}]
+  ENF -->|audit event| EVT[Audit Event]
+  EVT -->|index| IDX[(audit_index<br/>Postgres)]
+  
+  RC -->|real-time counts| AGG[Aggregation Service]
+  IDX -->|historical query| AGG
+  
+  AGG -->|precompute| SNAP[(analytics_snapshots<br/>Top-N by window)]
+  SNAP -->|fast lookup| API[/api/analytics/risky-users<br/>?window=24h&limit=10/]
+  
+  API -->|ranked list| UI[Studio Dashboard<br/>Top 10 Risky Users]
+  
+  style RC fill:#ffcccc
+  style IDX fill:#ccffcc
+  style SNAP fill:#ccccff
+  style API fill:#ffffcc
 ```
 
 
