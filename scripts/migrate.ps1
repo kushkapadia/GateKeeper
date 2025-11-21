@@ -24,16 +24,58 @@ if (-not (Test-Path $migrationFile)) {
 $migrationFile = (Resolve-Path $migrationFile).Path
 
 # Parse connection string and use individual psql parameters (more reliable on Windows)
-# Handles formats: postgresql://user:pass@host:port/db or postgresql://user@host:port/db
-if ($DatabaseUrl -match "^postgresql://(?:([^:@]+)(?::([^@]+))?@)?([^:/]+)(?::(\d+))?/(.+)$") {
-    $username = if ($matches[1]) { $matches[1] } else { "postgres" }
-    $password = $matches[2]
-    $host = $matches[3]
-    $port = if ($matches[4]) { $matches[4] } else { "5432" }
-    $database = $matches[5]
+# Handles formats: 
+#   postgresql://user:pass@host:port/db
+#   postgresql://user@host:port/db  
+#   postgresql://user:@host:port/db (empty password)
+#   postgresql://host:port/db (no auth)
+
+$parsed = $false
+$username = "postgres"
+$password = $null
+$host = "localhost"
+$port = "5432"
+$database = "gatekeeper"
+
+# Try to parse the connection string
+if ($DatabaseUrl -match "^postgresql://") {
+    # Remove the protocol
+    $urlPart = $DatabaseUrl -replace "^postgresql://", ""
     
+    # Split into auth@host:port/db parts
+    if ($urlPart -match "^([^@]+)@(.+)$") {
+        # Has authentication part
+        $authPart = $matches[1]
+        $rest = $matches[2]
+        
+        if ($authPart -match "^([^:]+):(.+)$") {
+            # Has password (may be empty)
+            $username = $matches[1]
+            $password = $matches[2]
+        } else {
+            # No password, just username
+            $username = $authPart
+        }
+    } else {
+        # No authentication
+        $rest = $urlPart
+    }
+    
+    # Parse host:port/database
+    if ($rest -match "^([^:/]+)(?::(\d+))?/(.+)$") {
+        $host = $matches[1]
+        if ($matches[2]) { $port = $matches[2] }
+        $database = $matches[3]
+        $parsed = $true
+    }
+}
+
+if ($parsed) {
     # Build psql command with individual parameters
-    $env:PGPASSWORD = $password
+    if ($password) {
+        $env:PGPASSWORD = $password
+    }
+    
     $psqlArgs = @(
         "-h", $host,
         "-p", $port,
@@ -43,14 +85,17 @@ if ($DatabaseUrl -match "^postgresql://(?:([^:@]+)(?::([^@]+))?@)?([^:/]+)(?::(\
         "-f", $migrationFile
     )
     
+    Write-Output "Running migration with: psql -h $host -p $port -U $username -d $database"
     & psql $psqlArgs
     $exitCode = $LASTEXITCODE
-    Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
+    
+    if ($password) {
+        Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
+    }
 } else {
-    # Fallback: try using connection string directly (may not work on all Windows setups)
-    Write-Warning "Could not parse connection string, trying direct format..."
-    & psql $DatabaseUrl -v "ON_ERROR_STOP=1" -f $migrationFile
-    $exitCode = $LASTEXITCODE
+    Write-Error "Could not parse connection string: $DatabaseUrl"
+    Write-Error "Expected format: postgresql://[user[:password]@]host[:port]/database"
+    exit 1
 }
 
 if ($exitCode -ne 0) {
