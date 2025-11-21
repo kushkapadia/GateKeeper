@@ -95,17 +95,17 @@ flowchart TB
 ### 4) Risky Users Analytics (Top-N)
 ```mermaid
 flowchart TB
-  ENF[Enforcement API] -->|decision=block| RC[Redis Counters<br/>user:blocks:{user_id}<br/>user:attacks:{user_id}]
+  ENF[Enforcement API] -->|decision=block| RC["Redis Counters<br/>user:blocks:user_id<br/>user:attacks:user_id"]
   ENF -->|audit event| EVT[Audit Event]
-  EVT -->|index| IDX[(audit_index<br/>Postgres)]
+  EVT -->|index| IDX[("audit_index<br/>Postgres")]
   
   RC -->|real-time counts| AGG[Aggregation Service]
   IDX -->|historical query| AGG
   
-  AGG -->|precompute| SNAP[(analytics_snapshots<br/>Top-N by window)]
-  SNAP -->|fast lookup| API[/api/analytics/risky-users<br/>?window=24h&limit=10/]
+  AGG -->|precompute| SNAP[("analytics_snapshots<br/>Top-N by window")]
+  SNAP -->|fast lookup| API["/api/analytics/risky-users<br/>?window=24h&limit=10"]
   
-  API -->|ranked list| UI[Studio Dashboard<br/>Top 10 Risky Users]
+  API -->|ranked list| UI["Studio Dashboard<br/>Top 10 Risky Users"]
   
   style RC fill:#ffcccc
   style IDX fill:#ccffcc
