@@ -33,7 +33,7 @@ $migrationFile = (Resolve-Path $migrationFile).Path
 $parsed = $false
 $username = "postgres"
 $password = $null
-$host = "localhost"
+$dbHost = "localhost"
 $port = "5432"
 $database = "gatekeeper"
 
@@ -63,7 +63,7 @@ if ($DatabaseUrl -match "^postgresql://") {
     
     # Parse host:port/database
     if ($rest -match "^([^:/]+)(?::(\d+))?/(.+)$") {
-        $host = $matches[1]
+        $dbHost = $matches[1]
         if ($matches[2]) { $port = $matches[2] }
         $database = $matches[3]
         $parsed = $true
@@ -77,7 +77,7 @@ if ($parsed) {
     }
     
     $psqlArgs = @(
-        "-h", $host,
+        "-h", $dbHost,
         "-p", $port,
         "-U", $username,
         "-d", $database,
@@ -85,7 +85,7 @@ if ($parsed) {
         "-f", $migrationFile
     )
     
-    Write-Output "Running migration with: psql -h $host -p $port -U $username -d $database"
+    Write-Output "Running migration with: psql -h $dbHost -p $port -U $username -d $database"
     & psql $psqlArgs
     $exitCode = $LASTEXITCODE
     
