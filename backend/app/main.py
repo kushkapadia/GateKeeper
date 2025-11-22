@@ -55,11 +55,10 @@ def login(payload: dict):
 
 @app.post("/v1/enforce", response_model=EnforcementResponse)
 def enforce(req: EnforcementRequest) -> EnforcementResponse:
-    # Stub enforcement: echo back with allowed decision
-    # Evaluate basic policies (block/rewrite) and get changes
-    decision, changes, trace = evaluate(req.stage, req.user, req.request)
+    # Evaluate policies for the specified stage with artifacts support
+    decision, changes, trace = evaluate(req.stage, req.user, req.request, req.artifacts)
 
-    # Build distilled policy context for LLM prompt
+    # Build distilled policy context for LLM prompt (pre_query / pre_retrieval stages)
     prompts = fetch_applicable_distilled_prompts(req.stage, req.user, req.request)
     policy_context = build_policy_context(req.user, prompts, role_scope={"role": req.user.get("role"), "department": req.user.get("department")}) if prompts else None
 

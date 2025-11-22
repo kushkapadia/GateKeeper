@@ -81,13 +81,14 @@ if ($parsed) {
     }
     
     $psqlArgs = @(
-        "-h", $dbHost,
-        "-p", $port,
-        "-U", $username,
-        "-d", $database,
-        "-v", "ON_ERROR_STOP=1",
-        "-f", $migrationFile
-    )
+    "-h", $dbHost,
+    "-p", $port,
+    "-U", $username,
+    "-d", $database,
+    "--set", "sslmode=require",
+    "-v", "ON_ERROR_STOP=1",
+    "-f", $migrationFile
+)
     
     Write-Output "Running migration with: psql -h $dbHost -p $port -U $username -d $database"
     & psql $psqlArgs

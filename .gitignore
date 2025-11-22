@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+*.whl
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+
+# Caches and tooling
+.mypy_cache/
+.pyre/
+.cache/
+*.log
+
+# IDEs / editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Jupyter
+.ipynb_checkpoints
+
+# Environment files (secrets)
+.env
+.env.*.local
+
+# Databases
+*.sqlite3
+*.db
+
+# Misc
+*.bak
+*.swp
+
+# Frontend inside studio folder (Node, builds, caches)
+studio/frontend/node_modules/
+studio/frontend/.cache/
+studio/frontend/build/
+studio/frontend/dist/
+studio/frontend/.next/
+studio/frontend/.nuxt/
+studio/frontend/.parcel-cache/
+studio/frontend/.vercel/
+studio/frontend/*.log
+studio/frontend/.env
