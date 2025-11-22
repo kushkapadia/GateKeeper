@@ -65,6 +65,7 @@ This MCP server advertises:
 * a tool called `policy:lint`
 * another tool `policy:test`
 * another `policy:simulate`
+* another `Violations Monitoring`
 
 Each tool has a **clear JSON contract** — exactly like the ones you saw in your Cursor doc.
 
