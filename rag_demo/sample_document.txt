@@ -1,0 +1,35 @@
+Enterprise RAG Demo - Sample Document
+
+Company Overview
+================
+
+Our company is a leading technology firm specializing in enterprise software solutions. We have offices in multiple locations and serve clients across various industries.
+
+Employee Information
+====================
+
+Our team consists of talented professionals from diverse backgrounds. The HR department manages recruitment, onboarding, and employee relations. The IT department handles all technical infrastructure and support.
+
+Compensation Structure
+======================
+
+The company offers competitive compensation packages. Base salaries are determined by role, experience, and market rates. Additional benefits include health insurance, retirement plans, and professional development opportunities.
+
+Contact Information
+===================
+
+For general inquiries, please contact info@company.com. For HR-related questions, reach out to hr@company.com. Technical support can be reached at support@company.com.
+
+Confidential Information
+========================
+
+This document contains general information about the company. Some sections may contain confidential details that are restricted to authorized personnel only.
+
+Department Structure
+====================
+
+- HR Department: Handles recruitment, employee relations, and benefits
+- IT Department: Manages infrastructure, security, and technical support
+- Finance Department: Oversees budgeting, accounting, and financial planning
+- Operations Department: Ensures smooth day-to-day business operations
+

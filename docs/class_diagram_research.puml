@@ -1,0 +1,126 @@
+@startuml GateKeeper Class Diagram - Research Paper
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam defaultFontSize 8
+skinparam roundcorner 3
+skinparam shadowing false
+skinparam linetype ortho
+
+' Compact vertical layout for two-column format
+top to bottom direction
+
+package "Application Layer" {
+    class FastAPIApplication {
+        +enforce()
+        +login()
+        +lint_policy()
+    }
+}
+
+package "Data Models" {
+    class EnforcementRequest {
+        +stage: Stage
+        +user: Dict
+        +request: Dict
+    }
+    
+    class EnforcementResponse {
+        +decision: str
+        +data: Dict
+        +trace: List[TraceItem]
+        +policyContext: Dict
+    }
+    
+    class TraceItem {
+        +policy: str
+        +action: str
+    }
+    
+    enum Stage {
+        pre_query
+        pre_retrieval
+        post_retrieval
+        post_generation
+    }
+}
+
+package "Policy Engine" {
+    class PolicyEvaluator {
+        +evaluate()
+    }
+    
+    class PolicyRepository {
+        +fetch_policies()
+        +fetch_prompts()
+    }
+    
+    class PolicyValidator {
+        +lint_policies()
+    }
+    
+    class PolicyDescriptor {
+        +save_descriptor()
+        +fetch_descriptor()
+    }
+    
+    class PolicyActions {
+        +action_block()
+        +action_rewrite()
+        +action_add_filters()
+    }
+    
+    class PathResolver {
+        +get_by_path()
+        +eval_expr()
+    }
+    
+    class PolicyContextBuilder {
+        +build_context()
+    }
+}
+
+package "Supporting Services" {
+    class AuthModule {
+        +authenticate()
+        +create_token()
+    }
+    
+    class Settings {
+        +database_url
+        +redis_url
+        +policy_version
+    }
+    
+    class MCPServer {
+        +policy_test()
+        +policy_simulate()
+    }
+}
+
+' Core relationships - simplified for clarity
+FastAPIApplication --> EnforcementRequest
+FastAPIApplication --> EnforcementResponse
+FastAPIApplication --> PolicyEvaluator
+FastAPIApplication --> AuthModule
+
+PolicyEvaluator --> PolicyRepository
+PolicyEvaluator --> PolicyActions
+PolicyEvaluator --> PathResolver
+PolicyEvaluator --> PolicyContextBuilder
+
+PolicyRepository --> PathResolver
+PolicyValidator --> PolicyDescriptor
+PolicyContextBuilder --> PolicyRepository
+MCPServer --> PolicyValidator
+
+EnforcementResponse *-- TraceItem
+EnforcementRequest --> Stage
+
+' Configuration (shown as dependencies)
+PolicyEvaluator ..> Settings
+PolicyRepository ..> Settings
+AuthModule ..> Settings
+
+@enduml
+

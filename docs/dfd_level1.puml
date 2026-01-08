@@ -1,0 +1,96 @@
+@startuml GateKeeper DFD Level 1 - Top-Level Diagram
+!theme plain
+skinparam defaultFontSize 11
+skinparam roundcorner 10
+skinparam database {
+    BackgroundColor lightblue
+    BorderColor darkblue
+}
+
+title GateKeeper System - Level 1 DFD (Top-Level Processes)
+
+actor "RAG Application" as RAG
+actor "Policy Author\n(Studio)" as Author
+actor "Auditor" as Auditor
+
+rectangle "GateKeeper System" {
+    
+    ' Processes
+    rectangle "1.0\nAuthenticate\nUser" as P1
+    rectangle "2.0\nEnforce\nPolicy" as P2
+    rectangle "3.0\nManage\nPolicies" as P3
+    rectangle "4.0\nGenerate\nAudit Reports" as P4
+    rectangle "5.0\nManage Schema\nDescriptors" as P5
+    
+    ' Data Stores
+    database "D1\nPolicies\nDatabase" as D1
+    database "D2\nSchema\nDescriptors\nDatabase" as D2
+    database "D3\nAudit Log\nDatabase" as D3
+    database "D4\nRedis\nCache" as D4
+}
+
+' External Entity to Process flows
+RAG --> P1 : Login Credentials\n(name, password)
+P1 --> RAG : JWT Token\n(tenant_id, token)
+
+RAG --> P2 : Enforcement Request\n(stage, user, request, artifacts)
+P2 --> RAG : Enforcement Response\n(decision, data, trace, policyContext)
+
+Author --> P3 : Policy Definition\n(YAML/JSON)
+P3 --> Author : Validation Results\n(errors, warnings, test results)
+
+Author --> P5 : Schema Descriptor\n(YAML)
+P5 --> Author : Descriptor Status\n(success/failure)
+
+Auditor --> P4 : Audit Query\n(filters, timeframe)
+P4 --> Auditor : Audit Report\n(decisions, traces, metrics)
+
+' Process to Data Store flows
+P2 --> D1 : Read Policies\n(stage, version)
+P2 --> D2 : Read Schema\n(tenant_id, version)
+P2 --> D4 : Read/Write Cache\n(user_attrs, policies)
+P2 --> D3 : Write Audit Event\n(audit_id, decision, trace)
+
+P3 --> D1 : Write Policies\n(policy, version, content)
+P3 --> D1 : Read Policies\n(for validation)
+
+P4 --> D3 : Read Audit Events\n(filtered queries)
+P4 --> D4 : Read Metrics\n(counters, stats)
+
+P5 --> D2 : Write Schema\n(tenant_id, version, descriptor)
+P5 --> D2 : Read Schema\n(tenant_id, version)
+
+P1 --> D1 : Read Tenant\n(name, password_hash)
+P1 --> D4 : Cache Token\n(JWT, TTL)
+
+    ' Inter-process flows (data flows between processes)
+P2 ..> P1 : Verify Token\n(authorization header)
+P1 ..> P2 : Tenant Info\n(tenant_id, name)
+
+P3 ..> P5 : Validate Paths\n(policy paths vs schema)
+P5 ..> P3 : Validation Result\n(valid/invalid paths)
+
+note right of P2
+  **Main Enforcement Process**
+  - Evaluates policies
+  - Executes actions
+  - Builds policy context
+  - Logs audit events
+end note
+
+note right of D1
+  **Policies Database**
+  - policies table
+  - policy_versions table
+  - tenants table
+end note
+
+note right of D3
+  **Audit Database**
+  - audit_index table
+  - Decision traces
+  - Metrics snapshots
+end note
+
+@enduml
+

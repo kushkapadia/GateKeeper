@@ -1,0 +1,123 @@
+@startuml GateKeeper DFD Level 2 - Enforce Policy Process
+!theme plain
+skinparam defaultFontSize 10
+skinparam roundcorner 10
+skinparam database {
+    BackgroundColor lightblue
+    BorderColor darkblue
+}
+
+title GateKeeper System - Level 2 DFD (Enforce Policy Process Detail)
+
+actor "RAG Application" as RAG
+
+rectangle "2.0 Enforce Policy" {
+    
+    ' Sub-processes
+    rectangle "2.1\nValidate\nRequest" as P21
+    rectangle "2.2\nFetch\nPolicies" as P22
+    rectangle "2.3\nEvaluate\nConditions" as P23
+    rectangle "2.4\nExecute\nActions" as P24
+    rectangle "2.5\nBuild Policy\nContext" as P25
+    rectangle "2.6\nLog Audit\nEvent" as P26
+    
+    ' Data stores (internal to process)
+    storage "Temporary\nContext" as T1
+    storage "Policy\nResults" as T2
+}
+
+' External data stores
+database "D1\nPolicies\nDatabase" as D1
+database "D2\nSchema\nDescriptors\nDatabase" as D2
+database "D3\nAudit Log\nDatabase" as D3
+database "D4\nRedis\nCache" as D4
+
+rectangle "1.0\nAuthenticate\nUser" as P1
+
+' External flows
+RAG --> P21 : Enforcement Request\n(stage, user, request, artifacts)
+P26 --> RAG : Enforcement Response\n(decision, data, trace, policyContext)
+
+' Process to external stores
+P22 --> D1 : Query Policies\n(stage, version, enabled)
+P22 --> D4 : Check Cache\n(policy:{version})
+D4 --> P22 : Cached Policies\n(hit/miss)
+P22 --> D4 : Cache Policies\n(TTL: 15m)
+
+P21 --> D2 : Read Schema\n(tenant_id, version)
+P21 --> D4 : Check User Cache\n(user:{id})
+D4 --> P21 : Cached User\n(attributes)
+P21 --> D4 : Cache User\n(TTL: 300s)
+
+P26 --> D3 : Write Audit Event\n(audit_id, stage, decision, trace)
+P26 --> D4 : Update Metrics\n(counters, histograms)
+
+' Inter-process flows
+P21 --> P1 : Verify Token\n(authorization)
+P1 --> P21 : Tenant Info\n(tenant_id, name)
+
+' Internal process flows
+P21 --> P22 : Validated Request\n(stage, user, request, tenant_id)
+P22 --> P23 : Applicable Policies\n(policy list, priority)
+P23 --> T1 : Evaluation Context\n(user, request, artifacts)
+P23 --> P24 : Matched Policies\n(policy, action, conditions)
+P24 --> T2 : Action Results\n(decision, changes)
+P24 --> P25 : Distilled Prompts\n(prompts list)
+P25 --> T2 : Policy Context\n(instruction, rules, role_scope)
+T2 --> P26 : Complete Response\n(decision, data, trace, context)
+
+' Data store reads within process
+P23 --> T1 : Read Context\n(user, request)
+P24 --> T1 : Read Context\n(for template substitution)
+P25 --> T1 : Read Context\n(user role, department)
+
+note right of P21
+  **Validate Request**
+  - Verify JWT token
+  - Validate request format
+  - Check required fields
+  - Load user context
+end note
+
+note right of P22
+  **Fetch Policies**
+  - Query by stage & version
+  - Filter by enabled status
+  - Order by priority
+  - Cache results
+end note
+
+note right of P23
+  **Evaluate Conditions**
+  - Parse 'when' clauses
+  - Resolve path expressions
+  - Evaluate 'all' / 'any'
+  - Match query patterns
+end note
+
+note right of P24
+  **Execute Actions**
+  - Block: return blocked
+  - Rewrite: modify query/filters
+  - Filter: add metadata filters
+  - Redact: sanitize content
+end note
+
+note right of P25
+  **Build Policy Context**
+  - Collect distilled prompts
+  - Build instruction set
+  - Add role scope
+  - Normalization hints
+end note
+
+note right of P26
+  **Log Audit Event**
+  - Create audit record
+  - Log decision & trace
+  - Update metrics
+  - Generate audit_id
+end note
+
+@enduml
+

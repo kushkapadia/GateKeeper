@@ -1,0 +1,45 @@
+HR Department - Employee Handbook
+==================================
+
+Welcome to our company! This handbook contains important information about employment policies, benefits, and procedures.
+
+Employee Benefits
+-----------------
+
+Our comprehensive benefits package includes:
+- Health insurance coverage for employees and dependents
+- Retirement plans with company matching
+- Professional development opportunities
+- Flexible work arrangements
+
+Compensation Structure
+---------------------
+
+Base salaries are determined by:
+- Job role and responsibilities
+- Years of experience
+- Market rates and industry standards
+- Performance evaluations
+
+Example salary ranges (confidential):
+- Junior Developer: $60,000 - $80,000
+- Senior Developer: $100,000 - $130,000
+- Manager: $120,000 - $150,000
+- Director: $150,000 - $200,000
+
+Contact Information
+-------------------
+
+HR Department Contacts:
+- General inquiries: hr@company.com
+- Benefits questions: benefits@company.com
+- Payroll: payroll@company.com
+- Recruitment: jobs@company.com
+
+Confidential Information
+------------------------
+
+This document contains sensitive employee information. Access is restricted to authorized HR personnel and management only.
+
+Employee IDs and personal information are stored securely and comply with data protection regulations.
+

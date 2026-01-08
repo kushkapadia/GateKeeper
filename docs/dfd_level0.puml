@@ -1,0 +1,43 @@
+@startuml GateKeeper DFD Level 0 - Context Diagram
+!theme plain
+skinparam defaultFontSize 12
+skinparam roundcorner 10
+
+title GateKeeper System - Context Diagram (Level 0)
+
+actor "RAG Application" as RAG
+actor "Policy Author\n(Studio)" as Author
+actor "Auditor" as Auditor
+actor "System Administrator" as Admin
+
+rectangle "GateKeeper\nPolicy Enforcement System" as GK {
+}
+
+' Data flows from RAG Application
+RAG --> GK : Enforcement Request\n(stage, user, request, artifacts)
+GK --> RAG : Enforcement Response\n(decision, data, trace, policyContext)
+
+' Data flows from Policy Author
+Author --> GK : Policy Definition\n(name, stage, when, action)
+Author --> GK : Schema Descriptor\n(user_attributes, doc_metadata)
+GK --> Author : Validation Results\n(errors, warnings)
+GK --> Author : Policy Test Results\n(passed, failed)
+
+' Data flows from Auditor
+Auditor --> GK : Audit Query\n(timeframe, filters)
+GK --> Auditor : Audit Reports\n(decisions, traces, metrics)
+
+' Data flows from System Administrator
+Admin --> GK : Configuration\n(settings, tenant setup)
+GK --> Admin : System Status\n(health, metrics)
+
+note right of GK
+  **GateKeeper System**
+  - Policy enforcement at 4 stages
+  - Multi-tenant support
+  - Audit logging
+  - Policy validation
+end note
+
+@enduml
+
