@@ -1,0 +1,233 @@
+@startuml GateKeeper Class Diagram
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+package "backend.app.models" {
+    class EnforcementRequest <<BaseModel>> {
+        +stage: Stage
+        +user: Dict[str, Any]
+        +request: Dict[str, Any]
+        +artifacts: Optional[Dict[str, Any]]
+        +policyVersion: Optional[str]
+        +correlationId: Optional[str]
+    }
+    
+    class EnforcementResponse <<BaseModel>> {
+        +decision: Literal["allowed", "modified", "blocked"]
+        +data: Dict[str, Any]
+        +auditId: str
+        +trace: List[TraceItem]
+        +policyContext: Optional[Dict[str, Any]]
+    }
+    
+    class TraceItem <<BaseModel>> {
+        +policy: str
+        +action: str
+        +details: Dict[str, Any]
+    }
+    
+    enum Stage {
+        pre_query
+        pre_retrieval
+        post_retrieval
+        post_generation
+    }
+}
+
+package "backend.app.core" {
+    class Settings <<BaseModel>> {
+        +app_name: str
+        +environment: str
+        +redis_url: str
+        +database_url: str
+        +policy_version: str
+    }
+    
+    class RedisClient <<utility>> {
+        +{static} get_redis(): redis.Redis
+        -{static} _pool: ConnectionPool
+    }
+}
+
+package "backend.app.auth" {
+    class AuthModule <<utility>> {
+        +{static} hash_password(password: str): str
+        +{static} verify_password(password: str, hash: str): bool
+        +{static} create_jwt_token(tenant_id: str, tenant_name: str): str
+        +{static} verify_jwt_token(token: str): Optional[dict]
+        +{static} authenticate_tenant(name: str, password: str): Optional[dict]
+    }
+}
+
+package "backend.app.policies" {
+    class PolicyEvaluator <<utility>> {
+        +{static} evaluate(stage: str, user: Dict, request: Dict): Tuple[str, Dict, List]
+        -{static} _render(template: Any, ctx: Dict): Any
+    }
+    
+    class PolicyRepository <<utility>> {
+        +{static} fetch_policies_for_stage(stage: str, version: str): List[Tuple]
+        +{static} fetch_applicable_distilled_prompts(stage: str, user: Dict, request: Dict): List[str]
+        -{static} _eval_when_ctx(ctx: Dict, expr: str): bool
+    }
+    
+    class PolicyDescriptor <<utility>> {
+        +{static} save_descriptor(tenant_id: str, version: str, yaml_content: str): bool
+        +{static} fetch_descriptor(tenant_id: str, version: str): Dict
+        +{static} fetch_descriptor_paths(tenant_id: str, version: str): Dict[str, Set[str]]
+    }
+    
+    class PolicyValidator <<utility>> {
+        +{static} lint_policies(tenant_id: str, version: str, policies: List[Dict]): Tuple[bool, List, List]
+        +{static} extract_paths(policy: Dict): List[str]
+    }
+    
+    class PolicyContextBuilder <<utility>> {
+        +{static} build_policy_context(user: Dict, prompts: List[str], role_scope: Optional[Dict]): Dict
+    }
+    
+    class PolicyActions <<utility>> {
+        +{static} action_block(message: str): Tuple[str, Dict]
+        +{static} action_rewrite_query(query: str, replacement: str): Tuple[str, Dict]
+        +{static} action_add_filters(existing: Dict, filters_to_add: Dict): Tuple[str, Dict]
+    }
+    
+    class PathResolver <<utility>> {
+        +{static} get_by_path(ctx: Dict, path: str): Any
+        +{static} eval_expr(ctx: Dict, expr: str): bool
+    }
+}
+
+package "backend.app.audit" {
+    class AuditLogger <<utility>> {
+        +{static} configure_logging(): None
+        +{static} get_logger(): Logger
+    }
+}
+
+package "backend.app" {
+    class FastAPIApplication <<application>> {
+        +app: FastAPI
+        +enforce(req: EnforcementRequest): EnforcementResponse
+        +login(payload: dict): dict
+        +lint_policy_endpoint(payload: dict): dict
+        +simulate_policy_endpoint(payload: dict): dict
+        +test_policy_endpoint(payload: dict): dict
+        +get_current_tenant(authorization: str): dict
+    }
+}
+
+package "mcp.server" {
+    class MCPServer <<server>> {
+        +{static} policy_test(payload: dict): dict
+        +{static} policy_simulate(payload: dict): dict
+        +{static} policy_lint(payload: dict): dict
+    }
+}
+
+package "rag_demo.backend" {
+    class RAGEngine {
+        -embedding_model: SentenceTransformer
+        -documents: Dict[str, Dict]
+        -all_chunks: List[str]
+        -all_embeddings: np.ndarray
+        -chunk_to_doc: Dict[int, str]
+        -chunk_metadata: Dict[int, Dict]
+        +add_document(file_path: str, filename: str): str
+        +retrieve(query: str, top_k: int, filters: Optional[Dict]): List[Dict]
+        +list_documents(): List[Dict]
+        +remove_document(doc_id: str): bool
+        -_extract_text(file_path: str): str
+        -_chunk_text(text: str, chunk_size: int, overlap: int): List[str]
+        -_extract_metadata_from_filename(filename: str): Dict
+        -_rebuild_index(): None
+        -_matches_filters(chunk_idx: int, filters: Dict): bool
+    }
+    
+    class NormalModeRules {
+        -blocked_terms: List[str]
+        -role_restrictions: Dict[str, List[str]]
+        -model: GenerativeModel
+        +process_query(query: str, user: Dict, rag_engine): Dict
+        -_pre_query_check(query: str, user: Dict): Tuple[bool, str]
+        -_pre_retrieval_filters(query: str, user: Dict): Dict
+        -_post_retrieval_sanitize(chunks: List[Dict], user: Dict): List[Dict]
+        -_post_generation_validate(answer: str, user: Dict): str
+    }
+    
+    class GatekeeperMode {
+        -gatekeeper: GateKeeperClient
+        -gatekeeper_url: str
+        -model: GenerativeModel
+        +process_query(query: str, user: Dict, rag_engine): Dict
+        -_enforce_async(stage: str, user: Dict, data: Dict): Dict
+    }
+}
+
+package "sdk.python.gatekeeper_sdk" {
+    class GateKeeperClient {
+        +enforce(stage: str, user: Dict, data: Dict): Dict
+    }
+}
+
+' Relationships - Dependencies (uses)
+FastAPIApplication ..> EnforcementRequest : uses
+FastAPIApplication ..> EnforcementResponse : returns
+FastAPIApplication ..> PolicyEvaluator : uses
+FastAPIApplication ..> PolicyRepository : uses
+FastAPIApplication ..> PolicyValidator : uses
+FastAPIApplication ..> PolicyDescriptor : uses
+FastAPIApplication ..> PolicyContextBuilder : uses
+FastAPIApplication ..> AuthModule : uses
+FastAPIApplication ..> Settings : uses
+
+PolicyEvaluator ..> PolicyRepository : uses
+PolicyEvaluator ..> PolicyActions : uses
+PolicyEvaluator ..> PathResolver : uses
+PolicyEvaluator ..> Settings : uses
+
+PolicyRepository ..> PathResolver : uses
+PolicyRepository ..> Settings : uses
+
+PolicyValidator ..> PolicyDescriptor : uses
+
+PolicyContextBuilder ..> PolicyRepository : uses
+
+MCPServer ..> PolicyValidator : uses
+
+NormalModeRules ..> RAGEngine : uses
+GatekeeperMode ..> RAGEngine : uses
+GatekeeperMode ..> GateKeeperClient : uses
+
+GateKeeperClient ..> FastAPIApplication : HTTP calls
+
+RedisClient ..> Settings : uses
+AuthModule ..> Settings : uses
+
+' Composition/Aggregation Relationships
+EnforcementResponse *-- TraceItem : contains
+EnforcementRequest --> Stage : uses
+
+note right of PolicyEvaluator
+  Evaluates policies for a given stage
+  Returns decision, changes, and trace
+end note
+
+note right of PolicyRepository
+  Fetches policies from database
+  Filters by stage and version
+end note
+
+note right of PolicyValidator
+  Validates policies against
+  schema descriptors
+end note
+
+note right of RAGEngine
+  Demo RAG engine with
+  in-memory vector store
+end note
+
+@enduml
+
