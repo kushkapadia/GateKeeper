@@ -1,0 +1,108 @@
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Acme Corp — Enterprise RAG Schema Descriptor
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# WHAT IS THIS FILE?
+#   This is the "schema descriptor" — it tells GateKeeper what attributes
+#   exist in YOUR system. It has two sections:
+#
+#   1. user_attributes — fields that describe the person making the query
+#      (e.g., their role, department, clearance level). These come from
+#      your identity provider (SSO, LDAP, etc.) and are sent in the
+#      "user" object of every API call.
+#
+#   2. doc_metadata — fields that are attached to each document/chunk in
+#      your vector database (e.g., sensitivity level, which department
+#      owns it). These are used in post_retrieval policies to filter or
+#      redact chunks.
+#
+# WHY DOES IT MATTER?
+#   Policies reference these fields in their "when" conditions and "match"
+#   rules. For example, a policy that says `user.clearance == "low"` only
+#   works if "clearance" is defined here. The descriptor is uploaded once
+#   and tells the policy editor what fields are available for creating rules.
+#
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+user_attributes:
+
+  # ROLE — the user's job title/level in the organization.
+  # Used by policies to decide who can ask what.
+  # Example: Policy 1 blocks interns from asking about salary.
+  #          Policy 3 exempts managers from department scoping.
+  - name: role
+    type: string
+    example: '["intern", "employee", "manager", "hr_admin", "executive", "legal_counsel"]'
+    description: The user's job role in the organization
+
+  # DEPARTMENT — which team/division the user belongs to.
+  # Used by policies to scope document access and block legal queries.
+  # Example: Policy 2 only blocks non-legal users from asking about lawsuits.
+  #          Policy 3 injects department filter so users only see their own docs.
+  - name: department
+    type: string
+    example: '["engineering", "hr", "finance", "legal", "marketing", "sales"]'
+    description: The department the user belongs to
+
+  # CLEARANCE — security clearance level for document access.
+  # Used by post_retrieval policies to decide which chunks to show or hide.
+  # Example: Policy 5 drops "confidential" chunks for low/medium clearance users.
+  - name: clearance
+    type: string
+    example: '["low", "medium", "high", "executive"]'
+    description: Security clearance level for document access
+
+  # EMPLOYMENT TYPE — the kind of working relationship.
+  # Used to differentiate full-time staff from contractors, interns, vendors.
+  # Example: Policy 1 blocks contractors from asking about salary (even though
+  #          their "role" might be "employee", their employment_type reveals the truth).
+  - name: employment_type
+    type: string
+    example: '["full_time", "contractor", "intern", "vendor"]'
+    description: The type of employment relationship
+
+
+doc_metadata:
+
+  # SENSITIVITY — how classified/sensitive the document is.
+  # This is the most important document field. It controls which chunks
+  # survive post_retrieval filtering.
+  # Example: Policy 5 drops chunks where sensitivity == "confidential"
+  #          for users with low/medium clearance.
+  - name: sensitivity
+    type: string
+    example: '["public", "internal", "confidential", "restricted"]'
+    description: Classification level of the document
+
+  # DEPARTMENT (document) — which team owns this document.
+  # Used by pre_retrieval to scope searches. When Policy 3 injects
+  # {department: "engineering"}, the vector DB only returns chunks
+  # whose department metadata matches "engineering".
+  - name: department
+    type: string
+    example: '["engineering", "hr", "finance", "legal", "marketing"]'
+    description: Which department owns this document
+
+  # TAGS — freeform content labels for fine-grained filtering.
+  # Can be used in policies to target specific document categories.
+  # Example: A policy could drop all chunks tagged "pii" for certain users.
+  - name: tags
+    type: array
+    example: '["pii", "financial", "legal", "handbook", "performance_review"]'
+    description: Content tags for fine-grained filtering
+
+  # AUTHOR — who wrote the document.
+  # This is a PII-sensitive field. Policy 4 blanks it to "[REDACTED]"
+  # so the LLM never sees real author names.
+  - name: author
+    type: string
+    example: John Smith
+    description: Document author name
+
+  # YEAR — when the document was created or last updated.
+  # Can be used in policies to enforce recency (e.g., only retrieve
+  # documents from the last 2 years).
+  - name: year
+    type: number
+    example: "2024"
+    description: Year the document was created or last updated
