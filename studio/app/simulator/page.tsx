@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiCall } from "@/lib/api";
-import { Play, RotateCcw, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { Play, RotateCcw, CheckCircle2, XCircle, AlertTriangle, Zap } from "lucide-react";
 
 const STAGE_DEFAULTS: Record<string, { request: string; artifacts: string }> = {
   pre_query: {
@@ -93,11 +93,7 @@ export default function SimulatorPage() {
 
     const payload: Record<string, any> = {
       stage,
-      user: {
-        role: userRole,
-        department: userDept,
-        clearance: userClearance,
-      },
+      user: { role: userRole, department: userDept, clearance: userClearance },
       request: parsedRequest,
     };
     if (parsedArtifacts) payload.artifacts = parsedArtifacts;
@@ -118,24 +114,31 @@ export default function SimulatorPage() {
   const decisionIcon = (decision: string) => {
     if (decision === "blocked") return <XCircle className="w-5 h-5 text-red-500" />;
     if (decision === "modified") return <AlertTriangle className="w-5 h-5 text-amber-500" />;
-    return <CheckCircle2 className="w-5 h-5 text-green-500" />;
+    return <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
   };
 
   const decisionColor = (decision: string) => {
-    if (decision === "blocked") return "border-red-300 bg-red-50/50";
-    if (decision === "modified") return "border-amber-300 bg-amber-50/50";
-    return "border-green-300 bg-green-50/50";
+    if (decision === "blocked") return "border-red-200 bg-red-50/50 ring-1 ring-red-500/10";
+    if (decision === "modified") return "border-amber-200 bg-amber-50/50 ring-1 ring-amber-500/10";
+    return "border-emerald-200 bg-emerald-50/50 ring-1 ring-emerald-500/10";
+  };
+
+  const stageColors: Record<string, string> = {
+    pre_query: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500/20",
+    pre_retrieval: "bg-violet-50 text-violet-700 ring-1 ring-violet-500/20",
+    post_retrieval: "bg-amber-50 text-amber-700 ring-1 ring-amber-500/20",
+    post_generation: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/20",
   };
 
   const showArtifacts = stage === "post_retrieval" || stage === "post_generation";
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold">Policy Simulator</h1>
-          <p className="text-muted-foreground mt-2">
-            Test how your saved policies behave with different user contexts, queries, and pipeline data — all without making real LLM or retrieval calls.
+          <h1 className="text-2xl font-bold text-slate-900">Policy Simulator</h1>
+          <p className="text-slate-500 mt-1">
+            Test how your saved policies behave with different user contexts, queries, and pipeline data.
           </p>
         </div>
 
@@ -143,64 +146,74 @@ export default function SimulatorPage() {
           {/* ── Left: Inputs ──────────────────────────── */}
           <div className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Pipeline Stage</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-slate-900">Pipeline Stage</CardTitle>
                 <CardDescription>
-                  Choose which stage to simulate. The request and artifacts fields below update with stage-appropriate defaults you can edit.
+                  Choose which stage to simulate. Inputs update with appropriate defaults.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <select
-                  className="w-full h-10 px-3 border rounded-md"
-                  value={stage}
-                  onChange={(e) => handleStageChange(e.target.value)}
-                >
-                  <option value="pre_query">Pre-Query — block/flag before retrieval</option>
-                  <option value="pre_retrieval">Pre-Retrieval — inject metadata filters</option>
-                  <option value="post_retrieval">Post-Retrieval — filter/redact chunks</option>
-                  <option value="post_generation">Post-Generation — validate LLM answer</option>
-                </select>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: "pre_query", label: "Pre-Query" },
+                    { value: "pre_retrieval", label: "Pre-Retrieval" },
+                    { value: "post_retrieval", label: "Post-Retrieval" },
+                    { value: "post_generation", label: "Post-Generation" },
+                  ].map((s) => (
+                    <button
+                      key={s.value}
+                      onClick={() => handleStageChange(s.value)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        stage === s.value
+                          ? stageColors[s.value]
+                          : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>User Context</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-slate-900">User Context</CardTitle>
                 <CardDescription>
-                  Simulate as a specific user. These values are checked against the &quot;Conditions (When)&quot; section of your policies.
+                  Simulate as a specific user. Checked against policy conditions.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Role</Label>
-                    <Input value={userRole} onChange={(e) => setUserRole(e.target.value)} placeholder="intern" />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-slate-500">Role</Label>
+                    <Input value={userRole} onChange={(e) => setUserRole(e.target.value)} placeholder="intern" className="h-9 bg-white" />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Department</Label>
-                    <Input value={userDept} onChange={(e) => setUserDept(e.target.value)} placeholder="HR" />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-slate-500">Department</Label>
+                    <Input value={userDept} onChange={(e) => setUserDept(e.target.value)} placeholder="HR" className="h-9 bg-white" />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Clearance</Label>
-                    <Input value={userClearance} onChange={(e) => setUserClearance(e.target.value)} placeholder="low" />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-slate-500">Clearance</Label>
+                    <Input value={userClearance} onChange={(e) => setUserClearance(e.target.value)} placeholder="low" className="h-9 bg-white" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Request Body</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-slate-900">Request Body</CardTitle>
                 <CardDescription>
-                  {stage === "pre_query" && "The query the user sent. Policies will check query.text against blocked terms."}
-                  {stage === "pre_retrieval" && "The retrieval request with existing filters. Policies may inject additional metadata filters."}
-                  {stage === "post_retrieval" && "The original query. Chunks come from the Artifacts field below."}
-                  {stage === "post_generation" && "The original query. The generated answer comes from the Artifacts field below."}
+                  {stage === "pre_query" && "The query the user sent. Policies check query.text against blocked terms."}
+                  {stage === "pre_retrieval" && "The retrieval request with existing filters."}
+                  {stage === "post_retrieval" && "The original query. Chunks come from Artifacts below."}
+                  {stage === "post_generation" && "The original query. Generated answer comes from Artifacts below."}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <textarea
-                  className="w-full h-32 p-3 font-mono text-sm border rounded-md bg-muted"
+                  className="w-full h-32 p-3 font-mono text-sm border border-slate-200 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors resize-none"
                   value={requestBody}
                   onChange={(e) => setRequestBody(e.target.value)}
                   spellCheck={false}
@@ -210,16 +223,16 @@ export default function SimulatorPage() {
 
             {showArtifacts && (
               <Card>
-                <CardHeader>
-                  <CardTitle>Artifacts</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold text-slate-900">Artifacts</CardTitle>
                   <CardDescription>
-                    {stage === "post_retrieval" && "The document chunks retrieved from the vector DB. Policies can redact PII or drop sensitive chunks here."}
-                    {stage === "post_generation" && "The LLM's generated response including text, citations, and confidence score. Policies can redact, enforce citations, or block."}
+                    {stage === "post_retrieval" && "Document chunks from the vector DB. Policies can redact PII or drop sensitive chunks."}
+                    {stage === "post_generation" && "The LLM's generated response including text, citations, and confidence."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <textarea
-                    className="w-full h-44 p-3 font-mono text-sm border rounded-md bg-muted"
+                    className="w-full h-44 p-3 font-mono text-sm border border-slate-200 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors resize-none"
                     value={artifactsBody}
                     onChange={(e) => setArtifactsBody(e.target.value)}
                     spellCheck={false}
@@ -229,11 +242,19 @@ export default function SimulatorPage() {
             )}
 
             <div className="flex gap-2">
-              <Button onClick={handleSimulate} className="flex-1" disabled={loading}>
-                <Play className="w-4 h-4 mr-2" />
+              <Button
+                onClick={handleSimulate}
+                className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/25"
+                disabled={loading}
+              >
+                {loading ? (
+                  <Zap className="w-4 h-4 mr-2 animate-pulse" />
+                ) : (
+                  <Play className="w-4 h-4 mr-2" />
+                )}
                 {loading ? "Running..." : "Run Simulation"}
               </Button>
-              <Button variant="outline" onClick={handleReset}>
+              <Button variant="outline" onClick={handleReset} className="h-11">
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Reset
               </Button>
@@ -243,7 +264,7 @@ export default function SimulatorPage() {
           {/* ── Right: Results ────────────────────────── */}
           <div className="space-y-4">
             {error && (
-              <Card className="border-red-300">
+              <Card className="border-red-200 bg-red-50/50">
                 <CardContent className="py-4">
                   <p className="text-sm text-red-600 font-medium">{error}</p>
                 </CardContent>
@@ -254,21 +275,21 @@ export default function SimulatorPage() {
               <>
                 <Card className={decisionColor(result.decision)}>
                   <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-lg">
                       {decisionIcon(result.decision)}
                       Decision: <span className="uppercase">{result.decision}</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {result.metrics && (
-                      <p className="text-xs text-muted-foreground mb-2">
-                        Evaluated in {result.metrics.latencyMs}ms
+                      <p className="text-xs text-slate-500 mb-3">
+                        Evaluated in <span className="font-mono font-medium">{result.metrics.latencyMs}ms</span>
                       </p>
                     )}
                     {result.data && Object.keys(result.data).length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium">Data / Changes:</p>
-                        <pre className="bg-white/80 p-3 rounded text-xs overflow-auto max-h-48 border">
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-slate-600">Data / Changes:</p>
+                        <pre className="bg-white/80 p-3 rounded-lg text-xs overflow-auto max-h-48 border border-slate-100 font-mono">
                           {JSON.stringify(result.data, null, 2)}
                         </pre>
                       </div>
@@ -278,19 +299,19 @@ export default function SimulatorPage() {
 
                 {result.trace && result.trace.length > 0 && (
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Trace ({result.trace.length} {result.trace.length === 1 ? "policy" : "policies"} fired)</CardTitle>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base font-semibold text-slate-900">Trace ({result.trace.length} {result.trace.length === 1 ? "policy" : "policies"} fired)</CardTitle>
                       <CardDescription>Each entry is a policy that matched and executed an action.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-3">
+                    <CardContent className="space-y-2">
                       {result.trace.map((t: any, i: number) => (
-                        <div key={i} className="border rounded-md p-3 text-sm space-y-1">
+                        <div key={i} className="border border-slate-100 rounded-lg p-3 text-sm space-y-2 bg-slate-50/50">
                           <div className="flex items-center justify-between">
-                            <span className="font-semibold">{t.policy}</span>
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{t.action}</span>
+                            <span className="font-semibold text-slate-800">{t.policy}</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-600 font-medium">{t.action}</span>
                           </div>
                           {t.details && Object.keys(t.details).length > 0 && (
-                            <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-32">
+                            <pre className="text-xs bg-white p-2 rounded-md overflow-auto max-h-32 border border-slate-100 font-mono">
                               {JSON.stringify(t.details, null, 2)}
                             </pre>
                           )}
@@ -302,10 +323,10 @@ export default function SimulatorPage() {
 
                 {result.trace && result.trace.length === 0 && (
                   <Card>
-                    <CardContent className="py-6 text-center">
-                      <p className="text-muted-foreground text-sm">No policies matched for this stage and user context.</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Make sure you have policies saved for the &quot;{stage}&quot; stage whose conditions match role=&quot;{userRole}&quot;.
+                    <CardContent className="py-8 text-center">
+                      <p className="text-slate-500 text-sm">No policies matched for this stage and user context.</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Make sure you have policies for &quot;{stage}&quot; whose conditions match role=&quot;{userRole}&quot;.
                       </p>
                     </CardContent>
                   </Card>
@@ -313,12 +334,12 @@ export default function SimulatorPage() {
 
                 {result.policyContext && (
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">LLM Policy Context (Distilled Prompts)</CardTitle>
-                      <CardDescription>These instructions would be injected into the LLM&apos;s system prompt for this user.</CardDescription>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base font-semibold text-slate-900">LLM Policy Context</CardTitle>
+                      <CardDescription>These instructions would be injected into the LLM&apos;s system prompt.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <pre className="bg-muted p-3 rounded text-xs overflow-auto max-h-48">
+                      <pre className="bg-slate-50 p-3 rounded-lg text-xs overflow-auto max-h-48 border border-slate-100 font-mono">
                         {JSON.stringify(result.policyContext, null, 2)}
                       </pre>
                     </CardContent>
@@ -329,10 +350,13 @@ export default function SimulatorPage() {
 
             {!result && !error && (
               <Card>
-                <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground">Click &quot;Run Simulation&quot; to test your policies against the input on the left.</p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    The simulator runs the same evaluation engine as the real <code>/v1/enforce</code> endpoint, using policies saved in your database.
+                <CardContent className="py-16 text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-50 mb-4">
+                    <Play className="w-5 h-5 text-indigo-500" />
+                  </div>
+                  <p className="text-slate-600 font-medium">Click &quot;Run Simulation&quot; to test your policies</p>
+                  <p className="text-xs text-slate-400 mt-2 max-w-sm mx-auto">
+                    The simulator runs the same evaluation engine as the real <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">/v1/enforce</code> endpoint.
                   </p>
                 </CardContent>
               </Card>

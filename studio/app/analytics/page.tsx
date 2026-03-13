@@ -52,9 +52,9 @@ export default function AnalyticsPage() {
   }, []);
 
   const decisionBadge = (d: string) => {
-    if (d === "blocked") return "bg-red-100 text-red-700";
-    if (d === "modified") return "bg-amber-100 text-amber-700";
-    return "bg-green-100 text-green-700";
+    if (d === "blocked") return "bg-red-500/10 text-red-600 ring-1 ring-red-500/20";
+    if (d === "modified") return "bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20";
+    return "bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20";
   };
 
   const timeAgo = (iso: string | null) => {
@@ -73,123 +73,107 @@ export default function AnalyticsPage() {
     return Math.round((n / stats.total_enforcements) * 100).toString();
   };
 
+  const summaryCards = [
+    { title: "Blocks (24h)", value: stats?.blocks ?? 0, icon: ShieldAlert, color: "text-red-600", bg: "bg-red-50" },
+    { title: "Modifications (24h)", value: stats?.modifications ?? 0, icon: PenTool, color: "text-amber-600", bg: "bg-amber-50" },
+    { title: "Allowed (24h)", value: stats?.allowed ?? 0, icon: ShieldCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { title: "Avg Latency", value: `${stats?.avg_latency_ms ?? 0}ms`, icon: Clock, color: "text-slate-600", bg: "bg-slate-100" },
+  ];
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold">Analytics &amp; Monitoring</h1>
-          <p className="text-muted-foreground mt-2">Track policy performance, enforcement trends, and risky users</p>
+          <h1 className="text-2xl font-bold text-slate-900">Analytics &amp; Monitoring</h1>
+          <p className="text-slate-500 mt-1">Track policy performance, enforcement trends, and risky users</p>
         </div>
 
         {/* ── Summary Cards ──────────────────────────────── */}
         <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Blocks (24h)</CardTitle>
-              <ShieldAlert className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{loading ? "…" : stats?.blocks ?? 0}</div>
-              <p className="text-xs text-muted-foreground">{pct(stats?.blocks ?? 0)}% of total</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Modifications (24h)</CardTitle>
-              <PenTool className="h-4 w-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{loading ? "…" : stats?.modifications ?? 0}</div>
-              <p className="text-xs text-muted-foreground">{pct(stats?.modifications ?? 0)}% of total</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Allowed (24h)</CardTitle>
-              <ShieldCheck className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{loading ? "…" : stats?.allowed ?? 0}</div>
-              <p className="text-xs text-muted-foreground">{pct(stats?.allowed ?? 0)}% of total</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Latency</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{loading ? "…" : `${stats?.avg_latency_ms ?? 0}ms`}</div>
-              <p className="text-xs text-muted-foreground">Policy evaluation time</p>
-            </CardContent>
-          </Card>
+          {summaryCards.map((s) => {
+            const Icon = s.icon;
+            return (
+              <Card key={s.title}>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-slate-600">{s.title}</span>
+                    <div className={`p-2 rounded-lg ${s.bg}`}>
+                      <Icon className={`h-4 w-4 ${s.color}`} />
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-slate-900">{loading ? "…" : s.value}</div>
+                  <p className="text-xs text-slate-500 mt-1">{pct(typeof s.value === "number" ? s.value : 0)}% of total</p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* ── Enforcement Breakdown Bar ──────────────────── */}
         {stats && stats.total_enforcements > 0 && (
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Enforcement Breakdown (24h)</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-semibold text-slate-900">Enforcement Breakdown (24h)</CardTitle>
               <CardDescription>{stats.total_enforcements} total enforcement calls</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex h-4 rounded-full overflow-hidden">
+              <div className="flex h-3 rounded-full overflow-hidden bg-slate-100">
                 {stats.blocks > 0 && (
-                  <div className="bg-red-400" style={{ width: `${pct(stats.blocks)}%` }} title={`${stats.blocks} blocked`} />
+                  <div className="bg-red-500 transition-all" style={{ width: `${pct(stats.blocks)}%` }} title={`${stats.blocks} blocked`} />
                 )}
                 {stats.modifications > 0 && (
-                  <div className="bg-amber-400" style={{ width: `${pct(stats.modifications)}%` }} title={`${stats.modifications} modified`} />
+                  <div className="bg-amber-500 transition-all" style={{ width: `${pct(stats.modifications)}%` }} title={`${stats.modifications} modified`} />
                 )}
                 {stats.allowed > 0 && (
-                  <div className="bg-green-400" style={{ width: `${pct(stats.allowed)}%` }} title={`${stats.allowed} allowed`} />
+                  <div className="bg-emerald-500 transition-all" style={{ width: `${pct(stats.allowed)}%` }} title={`${stats.allowed} allowed`} />
                 )}
               </div>
-              <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" /> Blocked ({stats.blocks})</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Modified ({stats.modifications})</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" /> Allowed ({stats.allowed})</span>
+              <div className="flex gap-5 mt-3 text-xs text-slate-500">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Blocked ({stats.blocks})</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> Modified ({stats.modifications})</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> Allowed ({stats.allowed})</span>
               </div>
             </CardContent>
           </Card>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           {/* ── Risky Users ──────────────────────────────── */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-2">
                 <ShieldAlert className="w-4 h-4 text-red-500" />
-                Risky Users (Top 10)
-              </CardTitle>
+                <CardTitle className="text-base font-semibold text-slate-900">Risky Users (Top 10)</CardTitle>
+              </div>
               <CardDescription>Users with the most blocked requests in 24h</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <p className="text-sm text-muted-foreground">Loading...</p>
+                <p className="text-sm text-slate-400">Loading...</p>
               ) : riskyUsers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No blocked users in the last 24 hours.</p>
+                <p className="text-sm text-slate-400">No blocked users in the last 24 hours.</p>
               ) : (
                 <div className="space-y-2">
                   {riskyUsers.map((u, i) => (
-                    <div key={u.user_hash} className="flex items-center justify-between text-sm p-2 border rounded-md">
+                    <div key={u.user_hash} className="flex items-center justify-between text-sm p-3 rounded-lg bg-slate-50/80 border border-slate-100">
                       <div className="flex items-center gap-3">
-                        <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">#{i + 1}</span>
+                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-[11px] font-bold text-slate-600">
+                          {i + 1}
+                        </span>
                         <div>
-                          <div className="flex items-center gap-2">
-                            {(u.user_role || u.user_department) ? (
-                              <span className="font-medium">
-                                {u.user_role}{u.user_role && u.user_department ? " · " : ""}{u.user_department}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground italic">unknown user</span>
-                            )}
-                          </div>
-                          <span className="font-mono text-xs text-muted-foreground">{u.user_hash}</span>
+                          {(u.user_role || u.user_department) ? (
+                            <span className="font-medium text-slate-700">
+                              {u.user_role}{u.user_role && u.user_department ? " · " : ""}{u.user_department}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 italic">unknown user</span>
+                          )}
+                          <div className="font-mono text-[11px] text-slate-400">{u.user_hash}</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-red-600 font-semibold">{u.block_count} blocks</span>
-                        <span className="text-xs text-muted-foreground">{timeAgo(u.last_blocked)}</span>
+                        <span className="text-xs text-slate-400">{timeAgo(u.last_blocked)}</span>
                       </div>
                     </div>
                   ))}
@@ -200,38 +184,38 @@ export default function AnalyticsPage() {
 
           {/* ── Audit Log ────────────────────────────────── */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-4 h-4" />
-                Recent Audit Log
-              </CardTitle>
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-slate-400" />
+                <CardTitle className="text-base font-semibold text-slate-900">Recent Audit Log</CardTitle>
+              </div>
               <CardDescription>Last 20 enforcement events</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <p className="text-sm text-muted-foreground">Loading...</p>
+                <p className="text-sm text-slate-400">Loading...</p>
               ) : recentLogs.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No audit entries yet.</p>
+                <p className="text-sm text-slate-400">No audit entries yet.</p>
               ) : (
-                <div className="space-y-2 max-h-80 overflow-auto">
+                <div className="space-y-1 max-h-80 overflow-auto">
                   {recentLogs.map((log) => (
-                    <div key={log.audit_id} className="flex items-center justify-between text-sm p-2 border rounded-md">
+                    <div key={log.audit_id} className="flex items-center justify-between text-sm py-2.5 px-2 rounded-lg hover:bg-slate-50/80 transition-colors">
                       <div className="flex items-center gap-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${decisionBadge(log.decision)}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${decisionBadge(log.decision)}`}>
                           {log.decision}
                         </span>
-                        <span className="text-muted-foreground text-xs">{log.stage}</span>
+                        <span className="text-slate-500 text-xs">{log.stage.replace("_", "-")}</span>
                         {log.policies && log.policies.length > 0 && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-slate-400">
                             ({log.policies.length} {log.policies.length === 1 ? "policy" : "policies"})
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
                         {log.metrics?.latency_ms != null && (
-                          <span className="text-xs text-muted-foreground">{log.metrics.latency_ms}ms</span>
+                          <span className="text-xs text-slate-400">{log.metrics.latency_ms}ms</span>
                         )}
-                        <span className="text-xs text-muted-foreground">{timeAgo(log.ts)}</span>
+                        <span className="text-xs text-slate-400">{timeAgo(log.ts)}</span>
                       </div>
                     </div>
                   ))}

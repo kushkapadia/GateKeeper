@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, AlertCircle, Pencil, ChevronLeft, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Trash2, AlertCircle, Pencil, ChevronLeft, Sparkles, Loader2, FileEdit } from "lucide-react";
 import { apiCall } from "@/lib/api";
 
 interface ConditionExpr {
@@ -60,7 +60,7 @@ const EMPTY_FORM: PolicyForm = {
 
 const CodeEditor = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
   <textarea
-    className="w-full h-96 p-4 font-mono text-sm border rounded-md bg-muted"
+    className="w-full h-96 p-4 font-mono text-sm border border-slate-200 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors resize-none"
     value={value}
     onChange={(e) => onChange(e.target.value)}
     spellCheck={false}
@@ -498,11 +498,11 @@ export default function PoliciesPage() {
 
   const stageBadgeColor = (stage: string) => {
     switch (stage) {
-      case "pre_query": return "bg-blue-100 text-blue-800";
-      case "pre_retrieval": return "bg-purple-100 text-purple-800";
-      case "post_retrieval": return "bg-amber-100 text-amber-800";
-      case "post_generation": return "bg-green-100 text-green-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "pre_query": return "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500/20";
+      case "pre_retrieval": return "bg-violet-50 text-violet-700 ring-1 ring-violet-500/20";
+      case "post_retrieval": return "bg-amber-50 text-amber-700 ring-1 ring-amber-500/20";
+      case "post_generation": return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/20";
+      default: return "bg-slate-100 text-slate-600";
     }
   };
 
@@ -513,55 +513,58 @@ export default function PoliciesPage() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold">Policies</h1>
-              <p className="text-muted-foreground mt-2">Manage enforcement policies for your RAG pipeline</p>
+              <h1 className="text-2xl font-bold text-slate-900">Policies</h1>
+              <p className="text-slate-500 mt-1">Manage enforcement policies for your RAG pipeline</p>
             </div>
-            <Button onClick={handleNew}>
+            <Button onClick={handleNew} className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/25">
               <Plus className="w-4 h-4 mr-2" />
               New Policy
             </Button>
           </div>
 
           {loadingPolicies ? (
-            <p className="text-muted-foreground">Loading policies...</p>
+            <p className="text-slate-400">Loading policies...</p>
           ) : policies.length === 0 ? (
             <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground mb-4">No policies yet. Create your first policy to get started.</p>
-                <Button onClick={handleNew}>
+              <CardContent className="py-16 text-center">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-50 mb-4">
+                  <FileEdit className="w-5 h-5 text-indigo-500" />
+                </div>
+                <p className="text-slate-500 mb-4">No policies yet. Create your first policy to get started.</p>
+                <Button onClick={handleNew} className="bg-indigo-600 hover:bg-indigo-700">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Policy
                 </Button>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {policies.map((p) => (
-                <Card key={p.id} className={!p.enabled ? "opacity-60" : ""}>
+                <Card key={p.id} className={`${!p.enabled ? "opacity-50" : ""}`}>
                   <CardContent className="py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold">{p.name}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${stageBadgeColor(p.stage)}`}>
-                            {p.stage}
+                          <span className="font-semibold text-slate-800">{p.name}</span>
+                          <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${stageBadgeColor(p.stage)}`}>
+                            {p.stage.replace("_", "-")}
                           </span>
                           {!p.enabled && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">disabled</span>
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 font-medium">disabled</span>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-sm text-slate-500 mt-1">
                           Priority: {p.priority}
-                          {p.distilled_prompt && ` · "${p.distilled_prompt.slice(0, 60)}${p.distilled_prompt.length > 60 ? "..." : ""}"`}
+                          {p.distilled_prompt && <span className="text-slate-400"> · &quot;{p.distilled_prompt.slice(0, 60)}{p.distilled_prompt.length > 60 ? "..." : ""}&quot;</span>}
                         </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(p)}>
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(p)} className="text-slate-600 hover:text-indigo-600 hover:border-indigo-200">
                         <Pencil className="w-3.5 h-3.5 mr-1" />
                         Edit
                       </Button>
-                      <Button variant="outline" size="sm" className="text-destructive" onClick={() => handleDelete(p.id)}>
+                      <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50" onClick={() => handleDelete(p.id)}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -586,7 +589,7 @@ export default function PoliciesPage() {
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">{editingId ? "Edit Policy" : "New Policy"}</h1>
+              <h1 className="text-2xl font-bold text-slate-900">{editingId ? "Edit Policy" : "New Policy"}</h1>
               {loadingDescriptor && <p className="text-xs text-muted-foreground mt-1">Loading descriptor...</p>}
               {!loadingDescriptor && !descriptor && (
                 <p className="text-xs text-destructive mt-1">No descriptor found. Upload a schema descriptor first.</p>
@@ -597,7 +600,7 @@ export default function PoliciesPage() {
             <Button variant="outline" onClick={handleLint} disabled={!policy.name}>
               Lint
             </Button>
-            <Button onClick={handleSave} disabled={!policy.name || saving}>
+            <Button onClick={handleSave} disabled={!policy.name || saving} className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/25">
               {saving ? "Saving..." : editingId ? "Update Policy" : "Save & Publish"}
             </Button>
           </div>
@@ -622,7 +625,7 @@ export default function PoliciesPage() {
         )}
 
         {!editingId && (
-          <Card className="border-purple-200 bg-gradient-to-r from-purple-50/50 to-indigo-50/50">
+          <Card className="border-indigo-200/50 bg-gradient-to-r from-indigo-50/40 via-violet-50/40 to-purple-50/40 ring-1 ring-indigo-500/10">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-purple-500" />
@@ -634,7 +637,7 @@ export default function PoliciesPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <textarea
-                className="w-full h-24 p-3 border rounded-md text-sm"
+                className="w-full h-24 p-3 border border-indigo-200/60 rounded-lg text-sm bg-white/50 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors resize-none"
                 placeholder={`Examples:\n• "Block interns from asking about salary or compensation"\n• "Redact all emails and phone numbers from retrieved chunks"\n• "Require every answer to cite at least 2 sources with 0.8 confidence"\n• "Only let users see documents from their own department"`}
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
@@ -647,7 +650,7 @@ export default function PoliciesPage() {
                 <Button
                   onClick={handleAiGenerate}
                   disabled={!aiPrompt.trim() || aiGenerating}
-                  className="bg-purple-600 hover:bg-purple-700"
+                    className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/25"
                 >
                   {aiGenerating ? (
                     <>
@@ -669,33 +672,31 @@ export default function PoliciesPage() {
           </Card>
         )}
 
-        <Tabs value={mode} onValueChange={(v) => setMode(v as "visual" | "yaml")}>
+        <Tabs value={mode} onValueChange={(v: string) => setMode(v as "visual" | "yaml")}>
           <TabsList>
             <TabsTrigger value="visual">Visual Builder</TabsTrigger>
             <TabsTrigger value="yaml">YAML Editor</TabsTrigger>
           </TabsList>
           <TabsContent value="visual" className="space-y-4">
-            <Card className="border-blue-200 bg-blue-50/30">
-              <CardContent className="py-4">
-                <p className="text-sm font-medium mb-2">How a policy works — the big picture</p>
-                <p className="text-xs text-muted-foreground">
-                  A policy is a rule that enforces data governance at one stage of the RAG pipeline. Every user query flows through 4 stages:
+            <div className="rounded-xl border border-slate-200/60 bg-gradient-to-r from-slate-50 to-indigo-50/30 p-5">
+                <p className="text-sm font-semibold text-slate-800 mb-2">How a policy works</p>
+                <p className="text-xs text-slate-500">
+                  A policy enforces data governance at one stage of the RAG pipeline. Every query flows through 4 stages:
                 </p>
-                <div className="flex items-center gap-2 my-2 text-xs font-mono">
-                  <span className="px-2 py-1 bg-blue-100 rounded">Pre-Query</span>
-                  <span>→</span>
-                  <span className="px-2 py-1 bg-purple-100 rounded">Pre-Retrieval</span>
-                  <span>→</span>
-                  <span className="px-2 py-1 bg-amber-100 rounded">Post-Retrieval</span>
-                  <span>→</span>
-                  <span className="px-2 py-1 bg-green-100 rounded">Post-Generation</span>
-                  <span>→ User sees answer</span>
+                <div className="flex items-center gap-2 my-3 text-xs font-medium">
+                  <span className="px-2.5 py-1 bg-indigo-100 text-indigo-700 rounded-md">Pre-Query</span>
+                  <span className="text-slate-300">→</span>
+                  <span className="px-2.5 py-1 bg-violet-100 text-violet-700 rounded-md">Pre-Retrieval</span>
+                  <span className="text-slate-300">→</span>
+                  <span className="px-2.5 py-1 bg-amber-100 text-amber-700 rounded-md">Post-Retrieval</span>
+                  <span className="text-slate-300">→</span>
+                  <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-md">Post-Generation</span>
+                  <span className="text-slate-400">→ User</span>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Each policy has 5 parts: <strong>(1) Stage</strong> — when in the pipeline to check, <strong>(2) Conditions</strong> — who it applies to, <strong>(3) Match</strong> — what content to look for, <strong>(4) Action</strong> — what to do when triggered, <strong>(5) Distilled Prompt</strong> — optional soft LLM guidance. Fill in each section below.
+                <p className="text-xs text-slate-500">
+                  Each policy has 5 parts: <strong className="text-slate-700">Stage</strong>, <strong className="text-slate-700">Conditions</strong> (who), <strong className="text-slate-700">Match</strong> (what), <strong className="text-slate-700">Action</strong> (enforcement), <strong className="text-slate-700">Distilled Prompt</strong> (LLM guidance).
                 </p>
-              </CardContent>
-            </Card>
+            </div>
             <Card>
               <CardHeader>
                 <CardTitle>Step 1: Basic Information</CardTitle>
@@ -712,7 +713,7 @@ export default function PoliciesPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Stage *</Label>
-                    <select className="w-full h-10 px-3 border rounded-md" value={policy.stage} onChange={(e) => setPolicy({ ...policy, stage: e.target.value as PolicyForm["stage"] })}>
+                    <select className="w-full h-10 px-3 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={policy.stage} onChange={(e) => setPolicy({ ...policy, stage: e.target.value as PolicyForm["stage"] })}>
                       <option value="pre_query">Pre-Query (before vector search)</option>
                       <option value="pre_retrieval">Pre-Retrieval (add filters)</option>
                       <option value="post_retrieval">Post-Retrieval (filter chunks)</option>
@@ -752,7 +753,7 @@ export default function PoliciesPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Match Mode</Label>
-                  <select className="w-full h-10 px-3 border rounded-md" value={policy.whenMode} onChange={(e) => setPolicy({ ...policy, whenMode: e.target.value as "any" | "all" | "none" })}>
+                  <select className="w-full h-10 px-3 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={policy.whenMode} onChange={(e) => setPolicy({ ...policy, whenMode: e.target.value as "any" | "all" | "none" })}>
                     <option value="any">ANY condition must be true (OR logic)</option>
                     <option value="all">ALL conditions must be true (AND logic)</option>
                     <option value="none">No conditions — applies to every user</option>
@@ -765,7 +766,7 @@ export default function PoliciesPage() {
                 </div>
 
                 {policy.whenMode !== "none" && (
-                  <div className="bg-muted/50 border rounded-md p-3 text-xs text-muted-foreground space-y-1">
+                  <div className="bg-slate-50/80 border border-slate-200/60 rounded-lg p-3 text-xs text-slate-500 space-y-1">
                     <p className="font-medium">How to build a condition:</p>
                     <p><strong>Field</strong> — The attribute to check. Start typing and pick from suggestions. Common fields: <code>user.role</code>, <code>user.department</code>, <code>user.clearance</code>.</p>
                     <p><strong>Operator</strong> — How to compare: <code>==</code> (exact match), <code>!=</code> (not equal), <code>contains</code> (substring), <code>in</code> (value is one of a comma-separated list).</p>
@@ -786,7 +787,7 @@ export default function PoliciesPage() {
                       </div>
                       <div className="space-y-2">
                         <Label>Operator</Label>
-                        <select className="w-full h-10 px-3 border rounded-md" value={cond.operator} onChange={(e) => updateCondition(idx, { operator: e.target.value as any })}>
+                        <select className="w-full h-10 px-3 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={cond.operator} onChange={(e) => updateCondition(idx, { operator: e.target.value as any })}>
                           <option value="==">equals (==)</option>
                           <option value="!=">not equals (!=)</option>
                           <option value="contains">contains</option>
@@ -825,7 +826,7 @@ export default function PoliciesPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="bg-muted/50 border rounded-md p-3 text-xs text-muted-foreground space-y-1 mb-2">
+                <div className="bg-slate-50/80 border border-slate-200/60 rounded-lg p-3 text-xs text-slate-500 space-y-1 mb-2">
                   {policy.stage === "pre_query" && (
                     <>
                       <p className="font-medium">Pre-Query Match — Blocked Terms:</p>
@@ -890,14 +891,14 @@ export default function PoliciesPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Action Type</Label>
-                  <select className="w-full h-10 px-3 border rounded-md" value={policy.actionType} onChange={(e) => setPolicy({ ...policy, actionType: e.target.value as PolicyForm["actionType"], actionConfig: {} })}>
+                  <select className="w-full h-10 px-3 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={policy.actionType} onChange={(e) => setPolicy({ ...policy, actionType: e.target.value as PolicyForm["actionType"], actionConfig: {} })}>
                     <option value="block">Block — Reject the request entirely</option>
                     <option value="rewrite">Rewrite — Inject metadata filters into the retrieval request</option>
                     <option value="filter">Filter — Drop or keep specific document chunks</option>
                     <option value="redact">Redact — Mask PII patterns in text</option>
                     <option value="enforce">Enforce — Require citations or minimum confidence</option>
                   </select>
-                  <div className="bg-muted/50 border rounded-md p-3 text-xs text-muted-foreground space-y-1 mt-1">
+                  <div className="bg-slate-50/80 border border-slate-200/60 rounded-lg p-3 text-xs text-slate-500 space-y-1 mt-1">
                     {policy.actionType === "block" && (
                       <>
                         <p className="font-medium">Block — Best for Pre-Query and Post-Generation stages.</p>
@@ -948,7 +949,7 @@ export default function PoliciesPage() {
                 {policy.actionType === "rewrite" && (
                   <div className="space-y-2">
                     <Label>Add Filters (JSON)</Label>
-                    <textarea className="w-full h-24 p-2 font-mono text-sm border rounded-md" value={JSON.stringify(policy.actionConfig.filters || {}, null, 2)}
+                    <textarea className="w-full h-24 p-2 font-mono text-sm border border-slate-200 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={JSON.stringify(policy.actionConfig.filters || {}, null, 2)}
                       onChange={(e) => { try { setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, filters: JSON.parse(e.target.value) } }); } catch {} }}
                       placeholder='{"department": "${user.department}"}' />
                     <p className="text-xs text-muted-foreground">JSON object of key-value filters injected into the vector DB query. Use <code>{`\${user.field}`}</code> to dynamically substitute user attributes.</p>
@@ -959,14 +960,14 @@ export default function PoliciesPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Keep If (JSON)</Label>
-                      <textarea className="w-full h-24 p-2 font-mono text-sm border rounded-md" value={JSON.stringify(policy.actionConfig.keep_if || {}, null, 2)}
+                      <textarea className="w-full h-24 p-2 font-mono text-sm border border-slate-200 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={JSON.stringify(policy.actionConfig.keep_if || {}, null, 2)}
                         onChange={(e) => { try { setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, keep_if: JSON.parse(e.target.value) } }); } catch {} }}
                         placeholder='{"sensitivity": "public"}' />
                       <p className="text-xs text-muted-foreground">Only chunks with metadata matching these key-value pairs survive. Others are dropped.</p>
                     </div>
                     <div className="space-y-2">
                       <Label>Drop If (JSON)</Label>
-                      <textarea className="w-full h-24 p-2 font-mono text-sm border rounded-md" value={JSON.stringify(policy.actionConfig.drop_if || {}, null, 2)}
+                      <textarea className="w-full h-24 p-2 font-mono text-sm border border-slate-200 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={JSON.stringify(policy.actionConfig.drop_if || {}, null, 2)}
                         onChange={(e) => { try { setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, drop_if: JSON.parse(e.target.value) } }); } catch {} }}
                         placeholder='{"sensitivity": "confidential"}' />
                       <p className="text-xs text-muted-foreground">Chunks with metadata matching these key-value pairs are removed before the LLM sees them.</p>
@@ -1020,7 +1021,7 @@ export default function PoliciesPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="bg-muted/50 border rounded-md p-3 text-xs text-muted-foreground space-y-1">
+                <div className="bg-slate-50/80 border border-slate-200/60 rounded-lg p-3 text-xs text-slate-500 space-y-1">
                   <p className="font-medium">When is this used?</p>
                   <p>The distilled prompt is collected from all policies whose Conditions (Step 2) match the current user. It is sent to the LLM as part of the system message, alongside the retrieved document chunks. This adds a layer of &quot;soft enforcement&quot; — even if the hard rules don&apos;t block the query, the LLM is instructed to be careful.</p>
                   <p className="font-medium mt-2">Tips for writing a good distilled prompt:</p>
@@ -1030,7 +1031,7 @@ export default function PoliciesPage() {
                   <p className="font-medium mt-2">This field is optional.</p>
                   <p>Leave it empty if the hard action (block/redact/filter) alone is sufficient and you don&apos;t need the LLM to adjust its behavior.</p>
                 </div>
-                <textarea className="w-full h-24 p-3 border rounded-md" value={policy.distilled_prompt} onChange={(e) => setPolicy({ ...policy, distilled_prompt: e.target.value })}
+                <textarea className="w-full h-24 p-3 border border-slate-200 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors resize-none" value={policy.distilled_prompt} onChange={(e) => setPolicy({ ...policy, distilled_prompt: e.target.value })}
                   placeholder="Do not answer about compensation/salaries of specific individuals." />
               </CardContent>
             </Card>

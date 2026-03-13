@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { apiCall } from "@/lib/api";
 import Link from "next/link";
-import { FileEdit, Play, BarChart, AlertCircle, ShieldAlert, Clock, Activity } from "lucide-react";
+import { FileEdit, Play, BarChart, AlertCircle, ShieldAlert, Clock, Activity, ArrowRight } from "lucide-react";
 
 interface DashboardStats {
   policies: { total: number };
@@ -70,9 +70,9 @@ export default function DashboardPage() {
   const activity = stats?.recent_activity ?? [];
 
   const decisionBadge = (d: string) => {
-    if (d === "blocked") return "bg-red-100 text-red-700";
-    if (d === "modified") return "bg-amber-100 text-amber-700";
-    return "bg-green-100 text-green-700";
+    if (d === "blocked") return "bg-red-500/10 text-red-600 ring-1 ring-red-500/20";
+    if (d === "modified") return "bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20";
+    return "bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20";
   };
 
   const timeAgo = (iso: string | null) => {
@@ -86,118 +86,131 @@ export default function DashboardPage() {
     return `${Math.floor(hrs / 24)}d ago`;
   };
 
+  const statCards = [
+    {
+      title: "Total Policies",
+      value: stats?.policies.total ?? 0,
+      subtitle: "Active across all stages",
+      icon: FileEdit,
+      color: "text-indigo-600",
+      bg: "bg-indigo-50",
+    },
+    {
+      title: "Blocks (24h)",
+      value: enforcement?.blocks ?? 0,
+      subtitle: enforcement && enforcement.total_enforcements > 0
+        ? `${Math.round((enforcement.blocks / enforcement.total_enforcements) * 100)}% of ${enforcement.total_enforcements} total`
+        : "No enforcements yet",
+      icon: ShieldAlert,
+      color: "text-red-600",
+      bg: "bg-red-50",
+    },
+    {
+      title: "Risky Users",
+      value: risky.length,
+      subtitle: "Blocked in last 24h",
+      icon: AlertCircle,
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+    },
+    {
+      title: "Avg Latency",
+      value: `${enforcement?.avg_latency_ms ?? 0}ms`,
+      subtitle: "Policy evaluation (24h avg)",
+      icon: Clock,
+      color: "text-slate-600",
+      bg: "bg-slate-100",
+    },
+  ];
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground mt-2">Overview of your policy management system</p>
+          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-slate-500 mt-1">Overview of your policy management system</p>
         </div>
 
         {/* ── Stat Cards ──────────────────────────────────────── */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Policies</CardTitle>
-              <FileEdit className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{loading ? "…" : stats?.policies.total ?? 0}</div>
-              <p className="text-xs text-muted-foreground">Active policies across all stages</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Blocks (24h)</CardTitle>
-              <ShieldAlert className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{loading ? "…" : enforcement?.blocks ?? 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {enforcement && enforcement.total_enforcements > 0
-                  ? `${Math.round((enforcement.blocks / enforcement.total_enforcements) * 100)}% of ${enforcement.total_enforcements} total`
-                  : "No enforcements yet"}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Risky Users</CardTitle>
-              <AlertCircle className="h-4 w-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{loading ? "…" : risky.length}</div>
-              <p className="text-xs text-muted-foreground">Users blocked in last 24h</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Latency</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{loading ? "…" : `${enforcement?.avg_latency_ms ?? 0}ms`}</div>
-              <p className="text-xs text-muted-foreground">Policy evaluation time (24h avg)</p>
-            </CardContent>
-          </Card>
+          {statCards.map((s) => {
+            const Icon = s.icon;
+            return (
+              <Card key={s.title}>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-slate-600">{s.title}</span>
+                    <div className={`p-2 rounded-lg ${s.bg}`}>
+                      <Icon className={`h-4 w-4 ${s.color}`} />
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-slate-900">{loading ? "…" : s.value}</div>
+                  <p className="text-xs text-slate-500 mt-1">{s.subtitle}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           {/* ── Quick Actions ───────────────────────────────── */}
           <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-semibold text-slate-900">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Link href="/policies">
-                <Button className="w-full justify-start" variant="outline">
-                  <FileEdit className="w-4 h-4 mr-2" />
-                  Create New Policy
-                </Button>
-              </Link>
-              <Link href="/simulator">
-                <Button className="w-full justify-start" variant="outline">
-                  <Play className="w-4 h-4 mr-2" />
-                  Run Simulator
-                </Button>
-              </Link>
-              <Link href="/analytics">
-                <Button className="w-full justify-start" variant="outline">
-                  <BarChart className="w-4 h-4 mr-2" />
-                  View Analytics
-                </Button>
-              </Link>
+              {[
+                { href: "/policies", icon: FileEdit, label: "Create New Policy", desc: "Define enforcement rules" },
+                { href: "/simulator", icon: Play, label: "Run Simulator", desc: "Test policy behavior" },
+                { href: "/analytics", icon: BarChart, label: "View Analytics", desc: "Monitor enforcement trends" },
+              ].map((item) => (
+                <Link key={item.href} href={item.href}>
+                  <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group cursor-pointer">
+                    <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 transition-colors">
+                      <item.icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-slate-700">{item.label}</span>
+                      <p className="text-xs text-slate-400">{item.desc}</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                  </div>
+                </Link>
+              ))}
             </CardContent>
           </Card>
 
           {/* ── Recent Activity ─────────────────────────────── */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-4 h-4" />
-                Recent Activity
-              </CardTitle>
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-slate-400" />
+                <CardTitle className="text-base font-semibold text-slate-900">Recent Activity</CardTitle>
+              </div>
               <CardDescription>Latest enforcement events</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <p className="text-sm text-muted-foreground">Loading...</p>
+                <p className="text-sm text-slate-400">Loading...</p>
               ) : activity.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No enforcement events yet. Use the Simulator or call <code>/v1/enforce</code> to generate activity.</p>
+                <div className="text-center py-6">
+                  <p className="text-sm text-slate-400">No enforcement events yet.</p>
+                  <p className="text-xs text-slate-400 mt-1">Use the Simulator to generate activity.</p>
+                </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {activity.map((a) => (
-                    <div key={a.audit_id} className="flex items-center justify-between text-sm">
+                    <div key={a.audit_id} className="flex items-center justify-between text-sm py-2 px-2 rounded-lg hover:bg-slate-50/80 transition-colors">
                       <div className="flex items-center gap-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${decisionBadge(a.decision)}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${decisionBadge(a.decision)}`}>
                           {a.decision}
                         </span>
-                        <span className="text-muted-foreground">{a.stage}</span>
+                        <span className="text-slate-500 text-xs">{a.stage.replace("_", "-")}</span>
                         {a.source === "simulate" && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">sim</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-500 font-medium ring-1 ring-indigo-500/20">sim</span>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground">{timeAgo(a.ts)}</span>
+                      <span className="text-xs text-slate-400">{timeAgo(a.ts)}</span>
                     </div>
                   ))}
                 </div>
@@ -209,35 +222,35 @@ export default function DashboardPage() {
         {/* ── Risky Users ──────────────────────────────────── */}
         {risky.length > 0 && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-2">
                 <ShieldAlert className="w-4 h-4 text-red-500" />
-                Risky Users (24h)
-              </CardTitle>
+                <CardTitle className="text-base font-semibold text-slate-900">Risky Users (24h)</CardTitle>
+              </div>
               <CardDescription>Users with the most blocked requests</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 {risky.map((u, i) => (
-                  <div key={u.user_hash} className="flex items-center justify-between text-sm p-2 border rounded-md">
+                  <div key={u.user_hash} className="flex items-center justify-between text-sm p-3 rounded-lg bg-slate-50/80 border border-slate-100">
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">#{i + 1}</span>
+                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-[11px] font-bold text-slate-600">
+                        {i + 1}
+                      </span>
                       <div>
-                        <div className="flex items-center gap-2">
-                          {(u.user_role || u.user_department) ? (
-                            <span className="font-medium">
-                              {u.user_role}{u.user_role && u.user_department ? " · " : ""}{u.user_department}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground italic">unknown user</span>
-                          )}
-                        </div>
-                        <span className="font-mono text-xs text-muted-foreground">{u.user_hash}</span>
+                        {(u.user_role || u.user_department) ? (
+                          <span className="font-medium text-slate-700">
+                            {u.user_role}{u.user_role && u.user_department ? " · " : ""}{u.user_department}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 italic">unknown user</span>
+                        )}
+                        <div className="font-mono text-[11px] text-slate-400">{u.user_hash}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-red-600 font-semibold">{u.block_count} blocks</span>
-                      <span className="text-xs text-muted-foreground">{timeAgo(u.last_blocked)}</span>
+                      <span className="text-red-600 font-semibold text-sm">{u.block_count} blocks</span>
+                      <span className="text-xs text-slate-400">{timeAgo(u.last_blocked)}</span>
                     </div>
                   </div>
                 ))}
