@@ -32,25 +32,10 @@ export default function DescriptorPage() {
     setLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:8000/api/schema/descriptor", {
+      await apiCall("/api/schema/descriptor", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          version: "v0",
-          content: content,
-        }),
+        body: JSON.stringify({ version: "v0", content }),
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to upload descriptor");
-      }
-      
-      const result = await response.json();
       setHasDescriptor(true);
       router.push("/dashboard");
     } catch (err: any) {

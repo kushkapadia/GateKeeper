@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { API_BASE } from "./api";
 
 interface Tenant {
   id: string;
@@ -20,7 +21,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   login: async (name, password) => {
     try {
-      const response = await fetch("http://localhost:8000/api/auth/login", {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, password }),
@@ -60,11 +61,36 @@ export const useAuthStore = create<AuthState>((set) => ({
 
 interface DescriptorState {
   hasDescriptor: boolean;
+  checked: boolean;
   setHasDescriptor: (value: boolean) => void;
+  checkDescriptor: () => Promise<void>;
 }
 
-export const useDescriptorStore = create<DescriptorState>((set) => ({
+export const useDescriptorStore = create<DescriptorState>((set, get) => ({
   hasDescriptor: false,
-  setHasDescriptor: (value) => set({ hasDescriptor: value }),
+  checked: false,
+  setHasDescriptor: (value) => set({ hasDescriptor: value, checked: true }),
+  checkDescriptor: async () => {
+    if (get().checked) return;
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        set({ hasDescriptor: false, checked: true });
+        return;
+      }
+      const res = await fetch(`${API_BASE}/api/schema/descriptor?version=v0`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        set({ hasDescriptor: false, checked: true });
+        return;
+      }
+      const data = await res.json();
+      const has = !!(data.descriptor && Object.keys(data.descriptor).length > 0);
+      set({ hasDescriptor: has, checked: true });
+    } catch {
+      set({ hasDescriptor: false, checked: true });
+    }
+  },
 }));
 
