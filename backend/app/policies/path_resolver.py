@@ -27,11 +27,14 @@ def eval_expr(ctx: Dict[str, Any], expr: str) -> bool:
         left = left.strip()
         right = right.strip().strip('"')
         return str(get_by_path(ctx, left)) == right
-    # != null
-    if "!=" in s and "null" in s:
-        left, _ = s.split("!=", 1)
+    # != operator
+    if "!=" in s:
+        left, right = s.split("!=", 1)
         left = left.strip()
-        return get_by_path(ctx, left) is not None
+        right = right.strip().strip('"')
+        if right == "null":
+            return get_by_path(ctx, left) is not None
+        return str(get_by_path(ctx, left)) != right
     # contains
     if " contains " in s:
         left, right = s.split(" contains ", 1)
