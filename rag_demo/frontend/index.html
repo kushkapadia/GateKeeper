@@ -3,424 +3,492 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise RAG Demo</title>
+    <title>GateKeeper RAG Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #fcfcfd;
+            --card: #ffffff;
+            --foreground: #0f172a;
+            --muted: #64748b;
+            --border: #e5e7eb;
+            --primary: #6C5CE7;
+            --primary-fg: #ffffff;
+            --primary-light: rgba(108, 92, 231, 0.08);
+            --secondary: #f1f5f9;
+            --red: #ef4444;
+            --amber: #f59e0b;
+            --green: #22c55e;
+            --radius: 10px;
         }
-        
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--foreground);
             min-height: 100vh;
-            padding: 20px;
+            -webkit-font-smoothing: antialiased;
         }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            opacity: 0.9;
-            font-size: 1.1em;
-        }
-        
-        .content {
-            padding: 30px;
-        }
-        
-        .section {
-            margin-bottom: 30px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        
-        .section h2 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 1.5em;
-        }
-        
-        .upload-area {
-            border: 2px dashed #667eea;
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
-            background: white;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .upload-area:hover {
-            background: #f0f4ff;
-            border-color: #764ba2;
-        }
-        
-        .upload-area.dragover {
-            background: #e8f0fe;
-            border-color: #667eea;
-        }
-        
-        input[type="file"] {
-            display: none;
-        }
-        
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 1em;
-            transition: transform 0.2s;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-        }
-        
-        .btn:active {
-            transform: translateY(0);
-        }
-        
-        .btn-secondary {
-            background: #6c757d;
-        }
-        
-        .query-form {
+
+        /* Layout */
+        .app { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 220px;
+            background: var(--card);
+            border-right: 1px solid var(--border);
+            padding: 0;
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
+            flex-direction: column;
+            z-index: 10;
         }
-        
-        .query-input {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #ddd;
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 16px;
+            height: 52px;
+            border-bottom: 1px solid var(--border);
+        }
+        .sidebar-brand .logo {
+            width: 24px; height: 24px;
+            background: var(--primary);
             border-radius: 6px;
-            font-size: 1em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        
-        .query-input:focus {
-            outline: none;
-            border-color: #667eea;
+        .sidebar-brand .logo svg { width: 14px; height: 14px; color: white; }
+        .sidebar-brand span { font-size: 13px; font-weight: 600; }
+        .sidebar-nav { padding: 8px; flex: 1; }
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--muted);
+            text-decoration: none;
+            transition: all 0.15s;
         }
-        
+        .sidebar-nav a:hover { color: var(--foreground); background: var(--secondary); }
+        .sidebar-nav a.active { color: var(--primary); background: var(--primary-light); font-weight: 500; }
+        .sidebar-nav a svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+        .main { margin-left: 220px; flex: 1; padding: 20px 24px; max-width: 1000px; }
+
+        /* Typography */
+        .page-title { font-size: 18px; font-weight: 600; }
+        .page-subtitle { font-size: 13px; color: var(--muted); margin-top: 2px; }
+        .section-title { font-size: 13px; font-weight: 500; margin-bottom: 12px; }
+
+        /* Cards */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        /* Mode Selector */
         .mode-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
+            display: inline-flex;
+            background: var(--secondary);
+            border-radius: 8px;
+            padding: 3px;
+            margin-bottom: 12px;
         }
-        
         .mode-btn {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #ddd;
-            background: white;
+            padding: 6px 16px;
+            border: none;
+            background: transparent;
             border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--muted);
             cursor: pointer;
-            font-size: 1em;
-            transition: all 0.3s;
+            transition: all 0.15s;
+            font-family: inherit;
         }
-        
         .mode-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-color: transparent;
+            background: var(--card);
+            color: var(--foreground);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.06);
         }
-        
+
+        /* Inputs */
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 13px;
+            font-family: inherit;
+            background: var(--card);
+            color: var(--foreground);
+            transition: border-color 0.15s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+        }
+        input[type="text"]::placeholder { color: var(--muted); opacity: 0.6; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: var(--primary);
+            color: var(--primary-fg);
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn-outline {
+            background: var(--card);
+            color: var(--foreground);
+            border: 1px solid var(--border);
+        }
+        .btn-outline:hover { background: var(--secondary); }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .btn-danger { background: transparent; color: var(--red); border: 1px solid var(--border); }
+        .btn-danger:hover { background: rgba(239,68,68,0.05); }
+
+        /* Upload */
+        .upload-area {
+            border: 1.5px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .upload-area:hover { border-color: var(--primary); background: var(--primary-light); }
+        .upload-area.dragover { border-color: var(--primary); background: var(--primary-light); }
+        .upload-area p { font-size: 13px; color: var(--muted); }
+        .upload-area p:first-child { font-weight: 500; color: var(--foreground); margin-bottom: 4px; }
+        .upload-file-input { display: none; }
+
+        /* User Context */
         .user-context {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .user-context input {
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            font-size: 0.9em;
-        }
-        
-        .result {
-            margin-top: 20px;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
-        
-        .result h3 {
-            color: #667eea;
-            margin-bottom: 15px;
-        }
-        
-        .answer {
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            line-height: 1.6;
-        }
-        
-        .sources {
-            margin-top: 15px;
-        }
-        
-        .source-item {
-            padding: 10px;
-            background: #e9ecef;
-            border-radius: 4px;
-            margin-bottom: 8px;
-            font-size: 0.9em;
-        }
-        
-        .stages {
-            margin-top: 20px;
-        }
-        
-        .stage {
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 6px;
+            gap: 8px;
             margin-bottom: 10px;
-            border-left: 4px solid #667eea;
         }
-        
-        .stage.decision-blocked {
-            border-left-color: #dc3545;
+
+        /* Query Form */
+        .query-form { display: flex; gap: 8px; }
+        .query-form input { flex: 1; }
+
+        /* Results */
+        .result-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-top: 12px;
         }
-        
-        .stage.decision-modified {
-            border-left-color: #ffc107;
-        }
-        
-        .stage.decision-allowed {
-            border-left-color: #28a745;
-        }
-        
-        .feedback {
-            margin-top: 20px;
-            padding: 15px;
-            background: #e7f3ff;
-            border-radius: 6px;
-        }
-        
-        .feedback-buttons {
+        .result-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
             display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .result-header .badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .badge-allowed { background: rgba(34,197,94,0.1); color: var(--green); }
+        .badge-blocked { background: rgba(239,68,68,0.1); color: var(--red); }
+        .badge-modified { background: rgba(245,158,11,0.1); color: var(--amber); }
+        .result-body { padding: 16px; }
+        .answer-text { font-size: 14px; line-height: 1.7; color: var(--foreground); }
+
+        /* Sources */
+        .sources-list { margin-top: 12px; }
+        .sources-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .source-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: var(--secondary);
+            border-radius: 6px;
+            font-size: 11px;
+            color: var(--muted);
+            margin-right: 6px;
+            margin-bottom: 4px;
+        }
+        .source-chip .sim { color: var(--primary); font-weight: 600; }
+
+        /* Stages */
+        .stages-section { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
+        .stage-row {
+            display: flex;
+            align-items: flex-start;
             gap: 10px;
+            padding: 8px 0;
+        }
+        .stage-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            margin-top: 5px;
+            flex-shrink: 0;
+        }
+        .stage-dot.allowed { background: var(--green); }
+        .stage-dot.blocked { background: var(--red); }
+        .stage-dot.modified { background: var(--amber); }
+        .stage-name { font-size: 12px; font-weight: 500; min-width: 100px; }
+        .stage-decision {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 1px 6px;
+            border-radius: 3px;
+        }
+        .stage-detail { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+        /* Documents grid */
+        .documents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .doc-card {
+            padding: 12px;
+            background: var(--secondary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .doc-info h4 { font-size: 13px; font-weight: 500; }
+        .doc-info p { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+        /* Feedback */
+        .feedback-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+        .feedback-row span { font-size: 12px; color: var(--muted); }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 24px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Error */
+        .error-msg {
+            padding: 10px 14px;
+            background: rgba(239,68,68,0.06);
+            border: 1px solid rgba(239,68,68,0.15);
+            border-radius: 8px;
+            color: var(--red);
+            font-size: 13px;
             margin-top: 10px;
         }
-        
-        .documents-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
+
+        /* Status badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 2px 8px;
+            border-radius: 4px;
         }
-        
-        .document-card {
-            padding: 15px;
-            background: white;
-            border-radius: 6px;
-            border: 1px solid #ddd;
+        .status-badge .dot { width: 5px; height: 5px; border-radius: 50%; }
+
+        /* Success */
+        .success-msg {
+            padding: 10px 14px;
+            background: rgba(34,197,94,0.06);
+            border: 1px solid rgba(34,197,94,0.15);
+            border-radius: 8px;
+            color: var(--green);
+            font-size: 13px;
+            margin-top: 10px;
         }
-        
-        .document-card h4 {
-            margin-bottom: 8px;
-            color: #333;
-        }
-        
-        .document-card p {
-            font-size: 0.9em;
-            color: #666;
-            margin-bottom: 10px;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #667eea;
-        }
-        
-        .error {
-            padding: 15px;
-            background: #fee;
-            border-left: 4px solid #dc3545;
-            border-radius: 6px;
-            color: #721c24;
-            margin-top: 15px;
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🚀 Enterprise RAG Demo</h1>
-            <p>Upload documents, ask questions, and see policy enforcement in action</p>
-        </div>
-        
-        <div class="content">
-            <!-- Document Upload Section -->
-            <div class="section">
-                <h2>📄 Upload Documents</h2>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <span>GateKeeper</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    RAG Demo
+                </a>
+                <a href="http://localhost:3000" target="_blank">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                    Studio
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main">
+            <div style="margin-bottom: 20px;">
+                <h1 class="page-title">RAG Demo</h1>
+                <p class="page-subtitle">Upload documents, ask questions, and compare Normal vs GateKeeper enforcement</p>
+            </div>
+
+            <!-- Upload -->
+            <div class="card">
+                <div class="section-title">Upload Documents</div>
                 <div class="upload-area" id="uploadArea">
-                    <p>📎 Drag and drop files here or click to browse</p>
-                    <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
-                        Supported: PDF, DOCX, TXT, MD
-                    </p>
-                    <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt,.md">
+                    <p>Drop files here or click to browse</p>
+                    <p>PDF, DOCX, TXT, MD</p>
+                    <input type="file" id="fileInput" class="upload-file-input" multiple accept=".pdf,.docx,.txt,.md">
                 </div>
                 <div id="uploadStatus"></div>
             </div>
-            
-            <!-- Documents List -->
-            <div class="section" id="documentsSection" style="display: none;">
-                <h2>📚 Uploaded Documents</h2>
-                <div class="documents-list" id="documentsList"></div>
+
+            <!-- Documents -->
+            <div class="card" id="documentsSection" style="display: none;">
+                <div class="section-title">Uploaded Documents</div>
+                <div class="documents-grid" id="documentsList"></div>
             </div>
-            
-            <!-- Query Section -->
-            <div class="section">
-                <h2>💬 Ask a Question</h2>
+
+            <!-- Query -->
+            <div class="card">
+                <div class="section-title">Ask a Question</div>
+
                 <div class="mode-selector">
                     <button class="mode-btn active" data-mode="normal">Normal Mode</button>
-                    <button class="mode-btn" data-mode="gatekeeper">Gatekeeper Mode</button>
+                    <button class="mode-btn" data-mode="gatekeeper">GateKeeper Mode</button>
                 </div>
-                
+
                 <div class="user-context">
-                    <input type="text" id="userRole" placeholder="User Role (e.g., admin, intern, guest)" value="user">
-                    <input type="text" id="userDepartment" placeholder="Department (e.g., HR, IT)" value="general">
+                    <input type="text" id="userRole" placeholder="Role (e.g. intern, admin)" value="user">
+                    <input type="text" id="userDepartment" placeholder="Department (e.g. HR, IT)" value="general">
                 </div>
-                
+
                 <div class="query-form">
-                    <input type="text" class="query-input" id="queryInput" placeholder="Enter your question here...">
+                    <input type="text" id="queryInput" placeholder="Enter your question...">
                     <button class="btn" onclick="submitQuery()">Ask</button>
                 </div>
-                
+
                 <div id="queryResult"></div>
             </div>
         </div>
     </div>
-    
+
     <script>
         const API_URL = 'http://localhost:8001';
         let currentMode = 'normal';
         let currentQueryId = null;
-        
-        // File upload
+
+        // Upload
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
-        
         uploadArea.addEventListener('click', () => fileInput.click());
-        
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-        
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-        
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            handleFiles(files);
-        });
-        
-        fileInput.addEventListener('change', (e) => {
-            handleFiles(e.target.files);
-        });
-        
+        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+        uploadArea.addEventListener('drop', (e) => { e.preventDefault(); uploadArea.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
         async function handleFiles(files) {
             const statusDiv = document.getElementById('uploadStatus');
-            statusDiv.innerHTML = '<div class="loading">Uploading...</div>';
-            
+            statusDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Uploading...</div>';
             for (const file of files) {
                 const formData = new FormData();
                 formData.append('file', file);
-                
                 try {
-                    const response = await fetch(`${API_URL}/api/upload`, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
+                    const response = await fetch(`${API_URL}/api/upload`, { method: 'POST', body: formData });
                     const result = await response.json();
                     if (response.ok) {
-                        statusDiv.innerHTML = `<div style="color: green; padding: 10px;">✓ ${result.filename} uploaded successfully</div>`;
+                        statusDiv.innerHTML = `<div class="success-msg">${result.filename} uploaded successfully</div>`;
                         loadDocuments();
                     } else {
-                        statusDiv.innerHTML = `<div class="error">Error: ${result.detail || 'Upload failed'}</div>`;
+                        statusDiv.innerHTML = `<div class="error-msg">${result.detail || 'Upload failed'}</div>`;
                     }
                 } catch (error) {
-                    statusDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                    statusDiv.innerHTML = `<div class="error-msg">${error.message}</div>`;
                 }
             }
         }
-        
+
         async function loadDocuments() {
             try {
                 const response = await fetch(`${API_URL}/api/documents`);
                 const data = await response.json();
-                
-                const documentsSection = document.getElementById('documentsSection');
-                const documentsList = document.getElementById('documentsList');
-                
+                const section = document.getElementById('documentsSection');
+                const list = document.getElementById('documentsList');
                 if (data.documents && data.documents.length > 0) {
-                    documentsSection.style.display = 'block';
-                    documentsList.innerHTML = data.documents.map(doc => `
-                        <div class="document-card">
-                            <h4>${doc.filename}</h4>
-                            <p>${doc.num_chunks} chunks</p>
-                            <button class="btn btn-secondary" onclick="deleteDocument('${doc.doc_id}')" style="font-size: 0.8em; padding: 6px 12px;">Delete</button>
+                    section.style.display = 'block';
+                    list.innerHTML = data.documents.map(doc => `
+                        <div class="doc-card">
+                            <div class="doc-info">
+                                <h4>${doc.filename}</h4>
+                                <p>${doc.num_chunks} chunks</p>
+                            </div>
+                            <button class="btn-danger btn-sm" onclick="deleteDocument('${doc.doc_id}')">Delete</button>
                         </div>
                     `).join('');
                 } else {
-                    documentsSection.style.display = 'none';
+                    section.style.display = 'none';
                 }
-            } catch (error) {
-                console.error('Error loading documents:', error);
-            }
+            } catch (error) { console.error('Error loading documents:', error); }
         }
-        
+
         async function deleteDocument(docId) {
             try {
-                const response = await fetch(`${API_URL}/api/documents/${docId}`, {
-                    method: 'DELETE'
-                });
-                if (response.ok) {
-                    loadDocuments();
-                }
-            } catch (error) {
-                console.error('Error deleting document:', error);
-            }
+                const response = await fetch(`${API_URL}/api/documents/${docId}`, { method: 'DELETE' });
+                if (response.ok) loadDocuments();
+            } catch (error) { console.error('Error deleting document:', error); }
         }
-        
+
         // Mode selector
         document.querySelectorAll('.mode-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -429,133 +497,116 @@
                 currentMode = btn.dataset.mode;
             });
         });
-        
-        // Query submission
+
+        // Query
         async function submitQuery() {
             const query = document.getElementById('queryInput').value.trim();
-            if (!query) {
-                alert('Please enter a question');
-                return;
-            }
-            
+            if (!query) return;
             const resultDiv = document.getElementById('queryResult');
-            resultDiv.innerHTML = '<div class="loading">Processing query...</div>';
-            
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Processing query...</div>';
             const userRole = document.getElementById('userRole').value || 'user';
             const userDepartment = document.getElementById('userDepartment').value || 'general';
-            
             try {
                 const response = await fetch(`${API_URL}/api/query`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        query: query,
-                        mode: currentMode,
-                        user: {
-                            role: userRole,
-                            department: userDepartment
-                        }
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, mode: currentMode, user: { role: userRole, department: userDepartment } })
                 });
-                
                 const result = await response.json();
                 currentQueryId = result.query_id;
-                
-                if (response.ok) {
-                    displayResult(result);
-                } else {
-                    resultDiv.innerHTML = `<div class="error">Error: ${result.detail || 'Query failed'}</div>`;
-                }
+                if (response.ok) displayResult(result);
+                else resultDiv.innerHTML = `<div class="error-msg">${result.detail || 'Query failed'}</div>`;
             } catch (error) {
-                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                resultDiv.innerHTML = `<div class="error-msg">${error.message}</div>`;
             }
         }
-        
+
         function displayResult(result) {
             const resultDiv = document.getElementById('queryResult');
-            
+            // Determine overall decision
+            let overallDecision = 'allowed';
+            if (result.stages) {
+                for (const [, stageData] of Object.entries(result.stages)) {
+                    if (stageData.decision === 'blocked') { overallDecision = 'blocked'; break; }
+                    if (stageData.decision === 'modified') overallDecision = 'modified';
+                }
+            }
+
+            // Stages
             let stagesHtml = '';
             if (result.stages) {
-                stagesHtml = '<div class="stages"><h3>Policy Enforcement Stages</h3>';
+                stagesHtml = '<div class="stages-section"><div class="sources-title">Enforcement Stages</div>';
                 for (const [stageName, stageData] of Object.entries(result.stages)) {
                     const decision = stageData.decision || 'allowed';
                     stagesHtml += `
-                        <div class="stage decision-${decision}">
-                            <strong>${stageName.replace('_', ' ').toUpperCase()}:</strong> ${decision}
-                            ${stageData.reason ? `<br><small>${stageData.reason}</small>` : ''}
-                            ${stageData.trace ? `<br><small>Trace: ${JSON.stringify(stageData.trace)}</small>` : ''}
-                        </div>
-                    `;
+                        <div class="stage-row">
+                            <div class="stage-dot ${decision}"></div>
+                            <div style="flex:1">
+                                <div style="display:flex;align-items:center;gap:6px">
+                                    <span class="stage-name">${stageName.replace(/_/g, '-')}</span>
+                                    <span class="stage-decision badge-${decision}" style="background:${decision === 'blocked' ? 'rgba(239,68,68,0.1)' : decision === 'modified' ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)'};color:${decision === 'blocked' ? 'var(--red)' : decision === 'modified' ? 'var(--amber)' : 'var(--green)'}">${decision}</span>
+                                </div>
+                                ${stageData.reason ? `<div class="stage-detail">${stageData.reason}</div>` : ''}
+                            </div>
+                        </div>`;
                 }
                 stagesHtml += '</div>';
             }
-            
+
+            // Sources
             let sourcesHtml = '';
             if (result.sources && result.sources.length > 0) {
-                sourcesHtml = '<div class="sources"><h4>Sources:</h4>';
+                sourcesHtml = '<div class="sources-list"><div class="sources-title">Sources</div>';
                 result.sources.forEach(source => {
-                    sourcesHtml += `<div class="source-item">${source.filename} (similarity: ${(source.similarity * 100).toFixed(1)}%)</div>`;
+                    sourcesHtml += `<span class="source-chip">${source.filename} <span class="sim">${(source.similarity * 100).toFixed(0)}%</span></span>`;
                 });
                 sourcesHtml += '</div>';
             }
-            
+
+            // Feedback
             let feedbackHtml = '';
             if (currentQueryId) {
                 feedbackHtml = `
-                    <div class="feedback">
-                        <h4>Was this answer helpful?</h4>
-                        <div class="feedback-buttons">
-                            <button class="btn" onclick="submitFeedback(true)">👍 Yes</button>
-                            <button class="btn btn-secondary" onclick="submitFeedback(false)">👎 No</button>
-                        </div>
-                    </div>
-                `;
+                    <div class="feedback-row">
+                        <span>Was this helpful?</span>
+                        <button class="btn-outline btn-sm" onclick="submitFeedback(true)">Yes</button>
+                        <button class="btn-outline btn-sm" onclick="submitFeedback(false)">No</button>
+                    </div>`;
             }
-            
+
             resultDiv.innerHTML = `
-                <div class="result">
-                    <h3>Answer:</h3>
-                    <div class="answer">${result.answer || 'No answer generated'}</div>
-                    ${sourcesHtml}
-                    ${stagesHtml}
-                    ${feedbackHtml}
-                </div>
-            `;
+                <div class="result-card">
+                    <div class="result-header">
+                        <span style="font-size:13px;font-weight:500">Result</span>
+                        <span class="badge badge-${overallDecision}">${overallDecision.toUpperCase()}</span>
+                        <span style="font-size:11px;color:var(--muted);margin-left:auto">${currentMode === 'gatekeeper' ? 'GateKeeper' : 'Normal'} Mode</span>
+                    </div>
+                    <div class="result-body">
+                        <div class="answer-text">${result.answer || 'No answer generated'}</div>
+                        ${sourcesHtml}
+                        ${stagesHtml}
+                        ${feedbackHtml}
+                    </div>
+                </div>`;
         }
-        
+
         async function submitFeedback(helpful) {
             if (!currentQueryId) return;
-            
             try {
                 await fetch(`${API_URL}/api/feedback`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        query_id: currentQueryId,
-                        helpful: helpful
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query_id: currentQueryId, helpful })
                 });
-                
                 alert('Thank you for your feedback!');
-            } catch (error) {
-                console.error('Error submitting feedback:', error);
-            }
+            } catch (error) { console.error('Error submitting feedback:', error); }
         }
-        
-        // Enter key to submit query
+
         document.getElementById('queryInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                submitQuery();
-            }
+            if (e.key === 'Enter') submitQuery();
         });
-        
-        // Load documents on page load
+
         loadDocuments();
     </script>
 </body>
 </html>
-

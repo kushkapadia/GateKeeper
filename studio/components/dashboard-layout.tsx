@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useAuthStore, useDescriptorStore } from "@/lib/store";
-import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/lib/store";
+import { useTheme } from "@/components/theme-provider";
 import Link from "next/link";
-import { LogOut, Home, FileEdit, Play, BarChart, TestTube, Settings, Shield } from "lucide-react";
+import { LogOut, Home, FileEdit, Play, BarChart, TestTube, Database, Shield, Sun, Moon } from "lucide-react";
+import { motion } from "framer-motion";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -12,6 +13,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const logout = useAuthStore((state) => state.logout);
   const tenant = useAuthStore((state) => state.tenant);
   const tenantName = tenant?.name;
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
@@ -24,23 +26,21 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     { href: "/simulator", label: "Simulator", icon: Play },
     { href: "/analytics", label: "Analytics", icon: BarChart },
     { href: "/tests", label: "Test Suites", icon: TestTube },
-    { href: "/descriptor", label: "Schema", icon: Settings },
+    { href: "/descriptor", label: "Schema", icon: Database },
   ];
 
   return (
-    <div className="min-h-screen flex bg-slate-50/80">
-      {/* ── Sidebar ────────────────────────────────────────── */}
-      <aside className="fixed inset-y-0 left-0 z-30 w-64 flex flex-col bg-gradient-to-b from-slate-900 to-slate-800 text-slate-300">
+    <div className="min-h-screen flex bg-background">
+      <aside className="fixed inset-y-0 left-0 z-30 w-[220px] flex flex-col bg-sidebar border-r border-sidebar-border">
         {/* Brand */}
-        <div className="flex items-center gap-3 px-6 h-16 border-b border-white/10">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500 text-white">
-            <Shield className="w-4.5 h-4.5" />
+        <div className="flex items-center gap-2 px-4 h-[52px] border-b border-sidebar-border">
+          <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+            <Shield className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="text-lg font-semibold text-white tracking-tight">GateKeeper</span>
+          <span className="text-[13px] font-semibold text-foreground">GateKeeper</span>
         </div>
 
-        {/* Nav items */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
@@ -48,45 +48,52 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                className={`relative flex items-center gap-2.5 px-3 py-2 rounded-md text-[13.5px] transition-colors ${
                   isActive
-                    ? "bg-indigo-500/20 text-white shadow-sm"
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                    ? "text-primary font-medium"
+                    : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-hover"
                 }`}
               >
-                <Icon className={`w-4.5 h-4.5 ${isActive ? "text-indigo-400" : ""}`} />
-                {item.label}
                 {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                  <motion.div
+                    layoutId="sidebar-active"
+                    className="absolute inset-0 rounded-md bg-primary/8"
+                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                  />
                 )}
+                <span className="relative flex items-center gap-2.5">
+                  <Icon className={`w-4 h-4 ${isActive ? "text-primary" : "text-sidebar-muted"}`} />
+                  {item.label}
+                </span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Tenant footer */}
-        <div className="px-3 py-4 border-t border-white/10">
-          <div className="flex items-center justify-between px-3 py-2">
+        <div className="px-2 py-2 space-y-0.5 border-t border-sidebar-border">
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center gap-2 px-2.5 py-[7px] rounded-md text-[13px] text-sidebar-foreground hover:text-foreground hover:bg-sidebar-hover transition-colors"
+          >
+            {theme === "dark" ? <Sun className="w-[15px] h-[15px]" /> : <Moon className="w-[15px] h-[15px]" />}
+            {theme === "dark" ? "Light Mode" : "Dark Mode"}
+          </button>
+          <div className="flex items-center justify-between px-2.5 py-[7px]">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-indigo-500/30 flex items-center justify-center text-xs font-bold text-indigo-300 uppercase">
+              <div className="w-5 h-5 rounded bg-primary/10 flex items-center justify-center text-[9px] font-semibold text-primary uppercase">
                 {tenantName?.charAt(0) || "T"}
               </div>
-              <span className="text-sm text-slate-300 truncate">{tenantName || "Tenant"}</span>
+              <span className="text-[12px] text-foreground truncate max-w-[110px]">{tenantName || "Tenant"}</span>
             </div>
-            <button
-              onClick={handleLogout}
-              className="p-1.5 rounded-md text-slate-500 hover:text-white hover:bg-white/10 transition-colors"
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
+            <button onClick={handleLogout} className="p-1 rounded text-sidebar-muted hover:text-foreground transition-colors" title="Logout">
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </aside>
 
-      {/* ── Main content ───────────────────────────────────── */}
-      <main className="flex-1 ml-64">
-        <div className="max-w-[1200px] mx-auto px-8 py-8">
+      <main className="flex-1 ml-[220px]">
+        <div className="max-w-[1200px] mx-auto px-6 py-5">
           {children}
         </div>
       </main>

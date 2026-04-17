@@ -55,10 +55,17 @@ const config: Config = {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-bg))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          active: "hsl(var(--sidebar-active))",
+          border: "hsl(var(--sidebar-border))",
+          hover: "hsl(var(--sidebar-hover))",
+          muted: "hsl(var(--sidebar-muted))",
+        },
       },
     },
   },
   plugins: [require("tailwindcss-animate")],
 };
 export default config;
-

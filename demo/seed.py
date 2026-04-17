@@ -31,7 +31,7 @@ def get_token() -> str:
 
     # Tenant doesn't exist or wrong password — upsert it directly in the DB
     import psycopg, bcrypt
-    db_url = "postgresql://kushkapadia@localhost:5432/gatekeeper"
+    db_url = "postgresql://global@localhost:5432/gatekeeper"
     pw_hash = bcrypt.hashpw(TENANT_PASSWORD.encode(), bcrypt.gensalt()).decode()
     with psycopg.connect(db_url) as conn:
         conn.execute(

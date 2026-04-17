@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, AlertCircle, Pencil, ChevronLeft, Sparkles, Loader2, FileEdit } from "lucide-react";
+import { Plus, Trash2, AlertCircle, Pencil, ChevronLeft, Sparkles, Loader2, FileEdit, ChevronRight, Shield, Zap, Eye, Code } from "lucide-react";
 import { apiCall } from "@/lib/api";
 
 interface ConditionExpr {
@@ -60,7 +60,7 @@ const EMPTY_FORM: PolicyForm = {
 
 const CodeEditor = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
   <textarea
-    className="w-full h-96 p-4 font-mono text-sm border border-slate-200 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors resize-none"
+    className="w-full h-96 p-4 font-mono text-sm border border-border rounded-xl bg-secondary/30 focus:bg-card focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200 resize-none text-foreground"
     value={value}
     onChange={(e) => onChange(e.target.value)}
     spellCheck={false}
@@ -79,9 +79,17 @@ interface Descriptor {
   doc_metadata?: DescriptorField[];
 }
 
+const PIPELINE_STAGES = [
+  { key: "pre_query", label: "Pre-Query", desc: "Block dangerous queries", color: "primary", num: 1 },
+  { key: "pre_retrieval", label: "Pre-Retrieval", desc: "Inject filters", color: "accent", num: 2 },
+  { key: "post_retrieval", label: "Post-Retrieval", desc: "Filter/redact chunks", color: "primary", num: 3 },
+  { key: "post_generation", label: "Post-Generation", desc: "Validate answers", color: "accent", num: 4 },
+];
+
 export default function PoliciesPage() {
   const [view, setView] = useState<"list" | "editor">("list");
   const [mode, setMode] = useState<"visual" | "yaml">("visual");
+  const [editorStep, setEditorStep] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [policy, setPolicy] = useState<PolicyForm>({ ...EMPTY_FORM });
   const [yamlOutput, setYamlOutput] = useState("");
@@ -128,7 +136,6 @@ export default function PoliciesPage() {
     }
   };
 
-  // ── Save / Update ──────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!policy.name || !policy.stage) return;
     setSaving(true);
@@ -220,12 +227,14 @@ export default function PoliciesPage() {
       labels,
     });
     setEditingId(p.id);
+    setEditorStep(1);
     setView("editor");
   };
 
   const handleNew = () => {
     setPolicy({ ...EMPTY_FORM });
     setEditingId(null);
+    setEditorStep(1);
     setView("editor");
   };
 
@@ -287,7 +296,6 @@ export default function PoliciesPage() {
     }
   };
 
-  // ── Content builder ─────────────────────────────────────────────────────
   const buildPolicyContent = () => {
     const when: any = {};
     if (policy.whenMode !== "none" && policy.conditions.length > 0) {
@@ -331,7 +339,6 @@ export default function PoliciesPage() {
     return result;
   };
 
-  // ── Helpers ─────────────────────────────────────────────────────────────
   const buildExprString = (c: ConditionExpr): string => {
     const numVal = Number(c.value);
     const isNumeric = !isNaN(numVal) && c.value.trim() !== "";
@@ -498,40 +505,92 @@ export default function PoliciesPage() {
 
   const stageBadgeColor = (stage: string) => {
     switch (stage) {
-      case "pre_query": return "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500/20";
-      case "pre_retrieval": return "bg-violet-50 text-violet-700 ring-1 ring-violet-500/20";
-      case "post_retrieval": return "bg-amber-50 text-amber-700 ring-1 ring-amber-500/20";
-      case "post_generation": return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/20";
-      default: return "bg-slate-100 text-slate-600";
+      case "pre_query": return "bg-primary/10 text-primary";
+      case "pre_retrieval": return "bg-accent/10 text-accent-foreground";
+      case "post_retrieval": return "bg-amber-500/10 text-amber-500";
+      case "post_generation": return "bg-emerald-500/10 text-emerald-500";
+      default: return "bg-secondary text-muted-foreground";
     }
   };
+
+  const actionBadgeColor = (action: string) => {
+    switch (action) {
+      case "block": return "bg-red-500/10 text-red-400";
+      case "redact": return "bg-amber-500/10 text-amber-400";
+      case "filter": return "bg-blue-500/10 text-blue-400";
+      case "rewrite": return "bg-primary/10 text-primary";
+      case "enforce": return "bg-emerald-500/10 text-emerald-400";
+      default: return "bg-secondary text-muted-foreground";
+    }
+  };
+
+  const editorSteps = [
+    { num: 1, label: "Basic Info", icon: FileEdit },
+    { num: 2, label: "Conditions", icon: Shield },
+    { num: 3, label: "Match", icon: Eye },
+    { num: 4, label: "Action", icon: Zap },
+    { num: 5, label: "Prompt", icon: Sparkles },
+  ];
 
   // ── List View ───────────────────────────────────────────────────────────
   if (view === "list") {
     return (
       <DashboardLayout>
         <div className="space-y-6">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center animate-fade-in">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Policies</h1>
-              <p className="text-slate-500 mt-1">Manage enforcement policies for your RAG pipeline</p>
+              <h1 className="text-lg font-semibold text-foreground">Policies</h1>
+              <p className="text-[13px] text-muted-foreground mt-0.5">Manage enforcement policies for your RAG pipeline</p>
             </div>
-            <Button onClick={handleNew} className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/25">
+            <Button onClick={handleNew} className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Plus className="w-4 h-4 mr-2" />
               New Policy
             </Button>
           </div>
 
+          {/* Pipeline Overview */}
+          <Card className="animate-fade-in overflow-hidden">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <Zap className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">Pipeline Stages</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {PIPELINE_STAGES.map((s, i) => {
+                  const count = policies.filter(p => p.stage === s.key).length;
+                  return (
+                    <div key={s.key} className="flex items-center gap-2 flex-1">
+                      <div className="flex-1 p-3 rounded-xl border border-border/40 bg-secondary/20 hover:bg-secondary/40 transition-all duration-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold bg-primary text-primary-foreground">
+                            {s.num}
+                          </div>
+                          <span className="text-[12px] font-semibold text-foreground">{s.label}</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">{count} {count === 1 ? "policy" : "policies"}</p>
+                      </div>
+                      {i < PIPELINE_STAGES.length - 1 && (
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30 flex-shrink-0" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
           {loadingPolicies ? (
-            <p className="text-slate-400">Loading policies...</p>
+            <div className="flex items-center justify-center py-12">
+              <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+            </div>
           ) : policies.length === 0 ? (
-            <Card>
+            <Card className="animate-fade-in">
               <CardContent className="py-16 text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-50 mb-4">
-                  <FileEdit className="w-5 h-5 text-indigo-500" />
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-4">
+                  <FileEdit className="w-6 h-6 text-primary" />
                 </div>
-                <p className="text-slate-500 mb-4">No policies yet. Create your first policy to get started.</p>
-                <Button onClick={handleNew} className="bg-indigo-600 hover:bg-indigo-700">
+                <p className="text-muted-foreground mb-4">No policies yet. Create your first policy to get started.</p>
+                <Button onClick={handleNew} className="bg-primary text-primary-foreground hover:bg-primary/90">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Policy
                 </Button>
@@ -539,32 +598,40 @@ export default function PoliciesPage() {
             </Card>
           ) : (
             <div className="space-y-2">
-              {policies.map((p) => (
-                <Card key={p.id} className={`${!p.enabled ? "opacity-50" : ""}`}>
+              {policies.map((p, i) => (
+                <Card key={p.id} className={!p.enabled ? "opacity-50" : ""}>
                   <CardContent className="py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-secondary/80">
+                        <Shield className="w-4 h-4 text-muted-foreground" />
+                      </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-800">{p.name}</span>
-                          <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${stageBadgeColor(p.stage)}`}>
+                          <span className="font-semibold text-foreground">{p.name}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${stageBadgeColor(p.stage)}`}>
                             {p.stage.replace("_", "-")}
                           </span>
+                          {p.content?.action?.type && (
+                            <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${actionBadgeColor(p.content.action.type)}`}>
+                              {p.content.action.type}
+                            </span>
+                          )}
                           {!p.enabled && (
-                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 font-medium">disabled</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-secondary text-muted-foreground font-medium">disabled</span>
                           )}
                         </div>
-                        <p className="text-sm text-slate-500 mt-1">
+                        <p className="text-[11px] text-muted-foreground mt-1">
                           Priority: {p.priority}
-                          {p.distilled_prompt && <span className="text-slate-400"> · &quot;{p.distilled_prompt.slice(0, 60)}{p.distilled_prompt.length > 60 ? "..." : ""}&quot;</span>}
+                          {p.distilled_prompt && <span className="text-muted-foreground/60"> · &quot;{p.distilled_prompt.slice(0, 60)}{p.distilled_prompt.length > 60 ? "..." : ""}&quot;</span>}
                         </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(p)} className="text-slate-600 hover:text-indigo-600 hover:border-indigo-200">
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(p)} className="hover:text-primary hover:border-primary/20">
                         <Pencil className="w-3.5 h-3.5 mr-1" />
                         Edit
                       </Button>
-                      <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50" onClick={() => handleDelete(p.id)}>
+                      <Button variant="outline" size="sm" className="text-red-400 hover:text-red-500 hover:border-red-500/30 hover:bg-red-500/5" onClick={() => handleDelete(p.id)}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -578,95 +645,90 @@ export default function PoliciesPage() {
     );
   }
 
-  // ── Editor View ─────────────────────────────────────────────────────────
+  // ── Editor View — 3-Column Layout ──────────────────────────────────────
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="space-y-5">
+        {/* Header */}
+        <div className="flex justify-between items-center animate-fade-in">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => { setView("list"); setEditingId(null); }}>
               <ChevronLeft className="w-4 h-4 mr-1" />
               Back
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">{editingId ? "Edit Policy" : "New Policy"}</h1>
-              {loadingDescriptor && <p className="text-xs text-muted-foreground mt-1">Loading descriptor...</p>}
+              <h1 className="text-lg font-semibold text-foreground">{editingId ? "Edit Policy" : "New Policy"}</h1>
+              {loadingDescriptor && <p className="text-[11px] text-muted-foreground mt-0.5">Loading descriptor...</p>}
               {!loadingDescriptor && !descriptor && (
-                <p className="text-xs text-destructive mt-1">No descriptor found. Upload a schema descriptor first.</p>
+                <p className="text-[11px] text-destructive mt-0.5">No descriptor found. Upload a schema descriptor first.</p>
               )}
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleLint} disabled={!policy.name}>
+            <Button variant="outline" onClick={handleLint} disabled={!policy.name} size="sm">
+              <Code className="w-3.5 h-3.5 mr-1.5" />
               Lint
             </Button>
-            <Button onClick={handleSave} disabled={!policy.name || saving} className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/25">
+            <Button onClick={handleSave} disabled={!policy.name || saving} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
               {saving ? "Saving..." : editingId ? "Update Policy" : "Save & Publish"}
             </Button>
           </div>
         </div>
 
+        {/* Lint Errors */}
         {lintErrors.length > 0 && (
-          <Card className="border-destructive">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-destructive">
-                <AlertCircle className="w-5 h-5" />
+          <Card className="border-destructive/30 bg-destructive/5 animate-scale-in">
+            <CardHeader className="py-3">
+              <CardTitle className="flex items-center gap-2 text-sm text-destructive">
+                <AlertCircle className="w-4 h-4" />
                 Lint Errors
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="list-disc list-inside space-y-1">
                 {lintErrors.map((err, i) => (
-                  <li key={i} className="text-sm">{err}</li>
+                  <li key={i} className="text-sm text-foreground">{err}</li>
                 ))}
               </ul>
             </CardContent>
           </Card>
         )}
 
+        {/* AI Generation */}
         {!editingId && (
-          <Card className="border-indigo-200/50 bg-gradient-to-r from-indigo-50/40 via-violet-50/40 to-purple-50/40 ring-1 ring-indigo-500/10">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-500" />
+          <Card className="border-primary/20 bg-primary/[0.02]">
+            <CardHeader className="py-4">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Sparkles className="w-4 h-4 text-accent-foreground" />
                 Generate with AI
               </CardTitle>
-              <CardDescription>
-                Describe what you want in plain English and the AI will generate a complete policy for you. It knows your schema descriptor, all available stages, actions, and match fields. You can review and edit the result before saving.
+              <CardDescription className="text-[11px]">
+                Describe what you want in plain English. Review and edit before saving.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <textarea
-                className="w-full h-24 p-3 border border-indigo-200/60 rounded-lg text-sm bg-white/50 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors resize-none"
-                placeholder={`Examples:\n• "Block interns from asking about salary or compensation"\n• "Redact all emails and phone numbers from retrieved chunks"\n• "Require every answer to cite at least 2 sources with 0.8 confidence"\n• "Only let users see documents from their own department"`}
+                className="w-full h-20 p-3 border border-primary/20 rounded-xl text-sm bg-card focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all resize-none text-foreground placeholder:text-muted-foreground"
+                placeholder={`Examples:\n"Block interns from asking about salary" · "Redact all emails from chunks" · "Require 2+ citations"`}
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 disabled={aiGenerating}
               />
-              {aiError && (
-                <p className="text-sm text-red-600">{aiError}</p>
-              )}
+              {aiError && <p className="text-sm text-red-400">{aiError}</p>}
               <div className="flex items-center gap-3">
                 <Button
                   onClick={handleAiGenerate}
                   disabled={!aiPrompt.trim() || aiGenerating}
-                    className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/25"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  size="sm"
                 >
                   {aiGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
+                    <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Generating...</>
                   ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Generate Policy
-                    </>
+                    <><Sparkles className="w-3.5 h-3.5 mr-1.5" />Generate Policy</>
                   )}
                 </Button>
-                {aiGenerating && (
-                  <p className="text-xs text-muted-foreground">This may take 10-30 seconds depending on your Ollama model...</p>
-                )}
+                {aiGenerating && <p className="text-[11px] text-muted-foreground">This may take 10-30 seconds...</p>}
               </div>
             </CardContent>
           </Card>
@@ -677,371 +739,407 @@ export default function PoliciesPage() {
             <TabsTrigger value="visual">Visual Builder</TabsTrigger>
             <TabsTrigger value="yaml">YAML Editor</TabsTrigger>
           </TabsList>
-          <TabsContent value="visual" className="space-y-4">
-            <div className="rounded-xl border border-slate-200/60 bg-gradient-to-r from-slate-50 to-indigo-50/30 p-5">
-                <p className="text-sm font-semibold text-slate-800 mb-2">How a policy works</p>
-                <p className="text-xs text-slate-500">
-                  A policy enforces data governance at one stage of the RAG pipeline. Every query flows through 4 stages:
-                </p>
-                <div className="flex items-center gap-2 my-3 text-xs font-medium">
-                  <span className="px-2.5 py-1 bg-indigo-100 text-indigo-700 rounded-md">Pre-Query</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="px-2.5 py-1 bg-violet-100 text-violet-700 rounded-md">Pre-Retrieval</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="px-2.5 py-1 bg-amber-100 text-amber-700 rounded-md">Post-Retrieval</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-md">Post-Generation</span>
-                  <span className="text-slate-400">→ User</span>
-                </div>
-                <p className="text-xs text-slate-500">
-                  Each policy has 5 parts: <strong className="text-slate-700">Stage</strong>, <strong className="text-slate-700">Conditions</strong> (who), <strong className="text-slate-700">Match</strong> (what), <strong className="text-slate-700">Action</strong> (enforcement), <strong className="text-slate-700">Distilled Prompt</strong> (LLM guidance).
-                </p>
-            </div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Step 1: Basic Information</CardTitle>
-                <CardDescription>
-                  Every policy enforces a rule at one specific stage of the RAG pipeline. A user query flows through 4 stages in order: Pre-Query, Pre-Retrieval, Post-Retrieval, Post-Generation. Choose the stage where your rule should be checked. The stage you pick determines what data is available for your conditions.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Policy Name *</Label>
-                    <Input value={policy.name} onChange={(e) => setPolicy({ ...policy, name: e.target.value })} placeholder="block-sensitive-queries" />
-                    <p className="text-xs text-muted-foreground">A unique, descriptive name for this policy. Use kebab-case like &quot;block-intern-salary&quot; or &quot;redact-pii-from-chunks&quot;.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Stage *</Label>
-                    <select className="w-full h-10 px-3 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={policy.stage} onChange={(e) => setPolicy({ ...policy, stage: e.target.value as PolicyForm["stage"] })}>
-                      <option value="pre_query">Pre-Query (before vector search)</option>
-                      <option value="pre_retrieval">Pre-Retrieval (add filters)</option>
-                      <option value="post_retrieval">Post-Retrieval (filter chunks)</option>
-                      <option value="post_generation">Post-Generation (validate answer)</option>
-                    </select>
-                    <div className="text-xs text-muted-foreground space-y-1 mt-1">
-                      <p className="font-medium">{getStageHelpText()}</p>
-                      {policy.stage === "pre_query" && <p>Use this to block or flag dangerous queries before any documents are retrieved. Example: block interns from asking about salary data.</p>}
-                      {policy.stage === "pre_retrieval" && <p>Use this to inject metadata filters that narrow which documents the vector DB returns. Example: restrict users to only their department&apos;s documents.</p>}
-                      {policy.stage === "post_retrieval" && <p>Use this to redact PII or drop sensitive chunks after documents are retrieved but before the LLM sees them. Example: remove email addresses and phone numbers from retrieved text.</p>}
-                      {policy.stage === "post_generation" && <p>Use this to validate the LLM&apos;s final answer before it reaches the user. Example: block answers without citations, or redact PII that leaked into the response.</p>}
+
+          <TabsContent value="visual">
+            <div className="grid grid-cols-12 gap-5">
+              {/* LEFT — Step Navigation (Policy Tree) */}
+              <div className="col-span-3 space-y-3">
+                {/* Pipeline Step Indicator */}
+                <Card>
+                  <CardContent className="p-3">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Pipeline Steps</p>
+                    <div className="flex items-center gap-1 mb-4">
+                      {PIPELINE_STAGES.map((s, i) => (
+                        <div key={s.key} className="flex items-center gap-1 flex-1">
+                          <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${policy.stage === s.key ? "bg-primary" : "bg-secondary"}`} />
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Priority (higher = evaluated first)</Label>
-                    <Input type="number" value={policy.priority} onChange={(e) => setPolicy({ ...policy, priority: parseInt(e.target.value) || 0 })} />
-                    <p className="text-xs text-muted-foreground">When multiple policies apply at the same stage, higher priority runs first. A blocking policy at priority 100 will stop the query before a priority 50 policy ever runs. Range: 0-100.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Labels (comma-separated)</Label>
-                    <Input value={policy.labels} onChange={(e) => setPolicy({ ...policy, labels: e.target.value })} placeholder="attack, pii, hr" />
-                    <p className="text-xs text-muted-foreground">Optional tags for organizing policies. Purely for your reference — does not affect enforcement. Example: &quot;pii, compliance&quot; or &quot;hr, sensitive&quot;.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                    <div className="space-y-0.5">
+                      {editorSteps.map((step) => {
+                        const StepIcon = step.icon;
+                        return (
+                          <button
+                            key={step.num}
+                            onClick={() => setEditorStep(step.num)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[12px] font-medium transition-all duration-200 ${
+                              editorStep === step.num
+                                ? "bg-primary/10 text-primary"
+                                : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+                            }`}
+                          >
+                            <div className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
+                              editorStep === step.num ? "bg-primary/20" : "bg-secondary"
+                            }`}>
+                              <StepIcon className="w-3 h-3" />
+                            </div>
+                            <span>{step.label}</span>
+                            {editorStep === step.num && (
+                              <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Step 2: Conditions — WHO does this policy apply to?</CardTitle>
-                <CardDescription>
-                  Conditions control <strong>who</strong> triggers this policy, based on user attributes (role, department, clearance level) or request context. If the conditions don&apos;t match, the policy is silently skipped and the query proceeds as normal. Think of this as the &quot;audience filter&quot; — it answers: &quot;Which users should this rule apply to?&quot;
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Match Mode</Label>
-                  <select className="w-full h-10 px-3 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={policy.whenMode} onChange={(e) => setPolicy({ ...policy, whenMode: e.target.value as "any" | "all" | "none" })}>
-                    <option value="any">ANY condition must be true (OR logic)</option>
-                    <option value="all">ALL conditions must be true (AND logic)</option>
-                    <option value="none">No conditions — applies to every user</option>
-                  </select>
-                  <p className="text-xs text-muted-foreground">
-                    {policy.whenMode === "any" && "The policy triggers if at least one condition matches. Example: user is an intern OR user is a contractor."}
-                    {policy.whenMode === "all" && "The policy triggers only if every condition matches. Example: user is an intern AND belongs to the HR department."}
-                    {policy.whenMode === "none" && "The policy applies to every request regardless of who the user is. Use this for universal rules like 'always redact PII'."}
-                  </p>
-                </div>
-
-                {policy.whenMode !== "none" && (
-                  <div className="bg-slate-50/80 border border-slate-200/60 rounded-lg p-3 text-xs text-slate-500 space-y-1">
-                    <p className="font-medium">How to build a condition:</p>
-                    <p><strong>Field</strong> — The attribute to check. Start typing and pick from suggestions. Common fields: <code>user.role</code>, <code>user.department</code>, <code>user.clearance</code>.</p>
-                    <p><strong>Operator</strong> — How to compare: <code>==</code> (exact match), <code>!=</code> (not equal), <code>contains</code> (substring), <code>in</code> (value is one of a comma-separated list).</p>
-                    <p><strong>Value</strong> — The value to compare against. For <code>in</code>, provide a comma-separated list like &quot;intern, contractor, temp&quot;.</p>
-                    <p className="mt-1 italic">Example: Field = <code>user.role</code>, Operator = <code>==</code>, Value = <code>intern</code> → policy applies only to interns.</p>
-                  </div>
+              {/* CENTER — Form Builder */}
+              <div className="col-span-5 space-y-4">
+                {editorStep === 1 && (
+                  <Card className="animate-fade-in">
+                    <CardHeader className="py-4">
+                      <CardTitle className="text-sm">Basic Information</CardTitle>
+                      <CardDescription className="text-[11px]">Define the policy identity and pipeline stage.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-[12px]">Policy Name *</Label>
+                        <Input value={policy.name} onChange={(e) => setPolicy({ ...policy, name: e.target.value })} placeholder="block-sensitive-queries" />
+                        <p className="text-[10px] text-muted-foreground">Unique, descriptive name in kebab-case.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[12px]">Stage *</Label>
+                        <select className="w-full h-10 px-3 border border-border rounded-lg bg-card text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all" value={policy.stage} onChange={(e) => setPolicy({ ...policy, stage: e.target.value as PolicyForm["stage"] })}>
+                          <option value="pre_query">Pre-Query (before vector search)</option>
+                          <option value="pre_retrieval">Pre-Retrieval (add filters)</option>
+                          <option value="post_retrieval">Post-Retrieval (filter chunks)</option>
+                          <option value="post_generation">Post-Generation (validate answer)</option>
+                        </select>
+                        <p className="text-[10px] text-muted-foreground">{getStageHelpText()}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label className="text-[12px]">Priority</Label>
+                          <Input type="number" value={policy.priority} onChange={(e) => setPolicy({ ...policy, priority: parseInt(e.target.value) || 0 })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[12px]">Labels</Label>
+                          <Input value={policy.labels} onChange={(e) => setPolicy({ ...policy, labels: e.target.value })} placeholder="attack, pii, hr" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
 
-                {policy.conditions.map((cond, idx) => (
-                  <div key={idx} className="flex gap-2 items-end p-4 border rounded-md">
-                    <div className="flex-1 grid grid-cols-3 gap-2">
+                {editorStep === 2 && (
+                  <Card className="animate-fade-in">
+                    <CardHeader className="py-4">
+                      <CardTitle className="text-sm">Conditions — WHO</CardTitle>
+                      <CardDescription className="text-[11px]">Control who triggers this policy based on user attributes.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                       <div className="space-y-2">
-                        <Label>Field</Label>
-                        <Input value={cond.field} onChange={(e) => updateCondition(idx, { field: e.target.value })} placeholder="user.role" list={`field-suggestions-${idx}`} />
-                        <datalist id={`field-suggestions-${idx}`}>
-                          {getFieldSuggestions().map((field) => (<option key={field} value={field} />))}
-                        </datalist>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Operator</Label>
-                        <select className="w-full h-10 px-3 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={cond.operator} onChange={(e) => updateCondition(idx, { operator: e.target.value as any })}>
-                          <option value="==">equals (==)</option>
-                          <option value="!=">not equals (!=)</option>
-                          <option value="contains">contains</option>
-                          <option value="in">in list</option>
+                        <Label className="text-[12px]">Match Mode</Label>
+                        <select className="w-full h-10 px-3 border border-border rounded-lg bg-card text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all" value={policy.whenMode} onChange={(e) => setPolicy({ ...policy, whenMode: e.target.value as "any" | "all" | "none" })}>
+                          <option value="any">ANY condition (OR)</option>
+                          <option value="all">ALL conditions (AND)</option>
+                          <option value="none">No conditions — all users</option>
                         </select>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Value</Label>
-                        <Input value={cond.value} onChange={(e) => updateCondition(idx, { value: e.target.value })} placeholder={getFieldExamples(cond.field) || "intern"} list={`value-examples-${idx}`} />
-                        {getFieldExamples(cond.field) && (
-                          <datalist id={`value-examples-${idx}`}>
-                            {getFieldExamples(cond.field).split(",").map((ex) => ex.trim()).filter(Boolean).map((ex) => (<option key={ex} value={ex} />))}
+
+                      {policy.whenMode !== "none" && policy.conditions.map((cond, idx) => (
+                        <div key={idx} className="flex gap-2 items-end p-3 border border-border/40 rounded-xl bg-secondary/20">
+                          <div className="flex-1 grid grid-cols-3 gap-2">
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] text-muted-foreground">Field</Label>
+                              <Input value={cond.field} onChange={(e) => updateCondition(idx, { field: e.target.value })} placeholder="user.role" list={`field-suggestions-${idx}`} className="h-9 text-[12px]" />
+                              <datalist id={`field-suggestions-${idx}`}>
+                                {getFieldSuggestions().map((field) => (<option key={field} value={field} />))}
+                              </datalist>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] text-muted-foreground">Operator</Label>
+                              <select className="w-full h-9 px-2 border border-border rounded-lg bg-card text-[12px] text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all" value={cond.operator} onChange={(e) => updateCondition(idx, { operator: e.target.value as any })}>
+                                <option value="==">equals</option>
+                                <option value="!=">not equals</option>
+                                <option value="contains">contains</option>
+                                <option value="in">in list</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] text-muted-foreground">Value</Label>
+                              <Input value={cond.value} onChange={(e) => updateCondition(idx, { value: e.target.value })} placeholder={getFieldExamples(cond.field) || "intern"} list={`value-examples-${idx}`} className="h-9 text-[12px]" />
+                              {getFieldExamples(cond.field) && (
+                                <datalist id={`value-examples-${idx}`}>
+                                  {getFieldExamples(cond.field).split(",").map((ex) => ex.trim()).filter(Boolean).map((ex) => (<option key={ex} value={ex} />))}
+                                </datalist>
+                              )}
+                            </div>
+                          </div>
+                          {policy.conditions.length > 1 && (
+                            <Button variant="ghost" size="icon" onClick={() => removeCondition(idx)} className="text-destructive h-9 w-9">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      {policy.whenMode !== "none" && (
+                        <Button variant="outline" onClick={addCondition} className="w-full" size="sm">
+                          <Plus className="w-3.5 h-3.5 mr-1.5" />
+                          Add Condition
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {editorStep === 3 && (
+                  <Card className="animate-fade-in">
+                    <CardHeader className="py-4">
+                      <CardTitle className="text-sm">Match — WHAT content</CardTitle>
+                      <CardDescription className="text-[11px]">Define what content triggers the policy action.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="p-3 rounded-xl bg-secondary/30 border border-border/40 text-[10px] text-muted-foreground space-y-1">
+                        {policy.stage === "pre_query" && <p>Set Match Field to <code className="bg-secondary px-1 rounded text-primary">query.text</code> and enter blocked keywords.</p>}
+                        {policy.stage === "pre_retrieval" && <p>Match against request parameters to inject vector DB filters.</p>}
+                        {policy.stage === "post_retrieval" && <p>Match against chunk metadata to decide which chunks to keep/drop/redact.</p>}
+                        {policy.stage === "post_generation" && <p>Match against the LLM&apos;s answer for quality enforcement.</p>}
+                      </div>
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label className="text-[12px]">Match Field</Label>
+                          <Input value={policy.matchType} onChange={(e) => setPolicy({ ...policy, matchType: e.target.value })} placeholder={getMatchFieldsForStage()[0] || "e.g., query.text"} list="match-suggestions" />
+                          <datalist id="match-suggestions">
+                            {getMatchFieldsForStage().map((f) => (<option key={f} value={f} />))}
                           </datalist>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[12px]">Match Value</Label>
+                          <Input
+                            value={Array.isArray(policy.matchValue) ? policy.matchValue.join(", ") : policy.matchValue}
+                            onChange={(e) => setPolicy({
+                              ...policy,
+                              matchValue: e.target.value.includes(",") ? e.target.value.split(",").map((s) => s.trim()) : e.target.value,
+                            })}
+                            placeholder='salary, PAN or ["salary", "PAN"]'
+                          />
+                          <p className="text-[10px] text-muted-foreground">Comma-separated for multiple terms.</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {editorStep === 4 && (
+                  <Card className="animate-fade-in">
+                    <CardHeader className="py-4">
+                      <CardTitle className="text-sm">Action — WHAT happens</CardTitle>
+                      <CardDescription className="text-[11px]">Define the enforcement outcome when the policy fires.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-[12px]">Action Type</Label>
+                        <select className="w-full h-10 px-3 border border-border rounded-lg bg-card text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all" value={policy.actionType} onChange={(e) => setPolicy({ ...policy, actionType: e.target.value as PolicyForm["actionType"], actionConfig: {} })}>
+                          <option value="block">Block — Reject entirely</option>
+                          <option value="rewrite">Rewrite — Inject filters</option>
+                          <option value="filter">Filter — Drop/keep chunks</option>
+                          <option value="redact">Redact — Mask PII</option>
+                          <option value="enforce">Enforce — Citations/confidence</option>
+                        </select>
+                      </div>
+
+                      {policy.actionType === "block" && (
+                        <div className="space-y-2">
+                          <Label className="text-[12px]">Block Message</Label>
+                          <Input value={policy.actionConfig.message || ""} onChange={(e) => setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, message: e.target.value } })} placeholder="Restricted topic for your role." />
+                        </div>
+                      )}
+
+                      {policy.actionType === "rewrite" && (
+                        <div className="space-y-2">
+                          <Label className="text-[12px]">Add Filters (JSON)</Label>
+                          <textarea className="w-full h-24 p-3 font-mono text-sm border border-border rounded-xl bg-secondary/30 focus:bg-card focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all resize-none text-foreground" value={JSON.stringify(policy.actionConfig.filters || {}, null, 2)}
+                            onChange={(e) => { try { setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, filters: JSON.parse(e.target.value) } }); } catch {} }}
+                            placeholder='{"department": "${user.department}"}' />
+                        </div>
+                      )}
+
+                      {policy.actionType === "filter" && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label className="text-[12px]">Keep If (JSON)</Label>
+                            <textarea className="w-full h-24 p-3 font-mono text-sm border border-border rounded-xl bg-secondary/30 focus:bg-card focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all resize-none text-foreground" value={JSON.stringify(policy.actionConfig.keep_if || {}, null, 2)}
+                              onChange={(e) => { try { setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, keep_if: JSON.parse(e.target.value) } }); } catch {} }}
+                              placeholder='{"sensitivity": "public"}' />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[12px]">Drop If (JSON)</Label>
+                            <textarea className="w-full h-24 p-3 font-mono text-sm border border-border rounded-xl bg-secondary/30 focus:bg-card focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all resize-none text-foreground" value={JSON.stringify(policy.actionConfig.drop_if || {}, null, 2)}
+                              onChange={(e) => { try { setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, drop_if: JSON.parse(e.target.value) } }); } catch {} }}
+                              placeholder='{"sensitivity": "confidential"}' />
+                          </div>
+                        </div>
+                      )}
+
+                      {policy.actionType === "redact" && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label className="text-[12px]">Patterns</Label>
+                            <Input value={Array.isArray(policy.actionConfig.patterns) ? policy.actionConfig.patterns.join(", ") : ""}
+                              onChange={(e) => setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, patterns: e.target.value.split(",").map((s) => s.trim()) } })}
+                              placeholder="EMAIL, PHONE, PAN" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[12px]">Fields</Label>
+                            <Input value={Array.isArray(policy.actionConfig.fields) ? policy.actionConfig.fields.join(", ") : ""}
+                              onChange={(e) => setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, fields: e.target.value.split(",").map((s) => s.trim()) } })}
+                              placeholder="employee_name, amount" />
+                          </div>
+                        </div>
+                      )}
+
+                      {policy.actionType === "enforce" && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label className="text-[12px]">Min Citations</Label>
+                            <Input type="number" value={policy.actionConfig.citations?.min || 0}
+                              onChange={(e) => setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, citations: { min: parseInt(e.target.value) || 0 } } })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[12px]">Min Confidence</Label>
+                            <Input type="number" step="0.01" value={policy.actionConfig.min_confidence || 0}
+                              onChange={(e) => setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, min_confidence: parseFloat(e.target.value) || 0 } })} />
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {editorStep === 5 && (
+                  <Card className="animate-fade-in">
+                    <CardHeader className="py-4">
+                      <CardTitle className="text-sm">Distilled Prompt — LLM Guidance</CardTitle>
+                      <CardDescription className="text-[11px]">Natural-language instruction injected into the LLM&apos;s system prompt.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <textarea className="w-full h-32 p-3 border border-border rounded-xl bg-secondary/30 focus:bg-card focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200 resize-none text-foreground text-sm" value={policy.distilled_prompt} onChange={(e) => setPolicy({ ...policy, distilled_prompt: e.target.value })}
+                        placeholder="Do not answer about compensation/salaries of specific individuals." />
+                      <p className="text-[10px] text-muted-foreground">Optional. Leave empty if the hard action alone is sufficient.</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Step Navigation Buttons */}
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditorStep(Math.max(1, editorStep - 1))}
+                    disabled={editorStep === 1}
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5 mr-1" />
+                    Previous
+                  </Button>
+                  <span className="text-[11px] text-muted-foreground">Step {editorStep} of 5</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditorStep(Math.min(5, editorStep + 1))}
+                    disabled={editorStep === 5}
+                  >
+                    Next
+                    <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* RIGHT — Live Preview */}
+              <div className="col-span-4">
+                <Card className="sticky top-8">
+                  <CardHeader className="py-4">
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-primary" />
+                      <CardTitle className="text-sm">Live Preview</CardTitle>
+                    </div>
+                    <CardDescription className="text-[11px]">How this policy will be evaluated</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Policy Summary */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Policy</span>
+                        {policy.name && <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${stageBadgeColor(policy.stage)}`}>{policy.stage.replace("_", "-")}</span>}
+                      </div>
+                      <p className="text-sm font-semibold text-foreground">{policy.name || "Untitled Policy"}</p>
+                    </div>
+
+                    {/* Conditions Preview */}
+                    {policy.whenMode !== "none" && policy.conditions.some(c => c.field && c.value) && (
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Conditions ({policy.whenMode})</span>
+                        <div className="space-y-1">
+                          {policy.conditions.filter(c => c.field && c.value).map((c, i) => (
+                            <div key={i} className="px-2.5 py-1.5 rounded-lg bg-secondary/50 border border-border/30 text-[11px] font-mono text-foreground">
+                              {buildExprString(c)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Match Preview */}
+                    {policy.matchType && policy.matchValue && (
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Match</span>
+                        <div className="px-2.5 py-1.5 rounded-lg bg-secondary/50 border border-border/30 text-[11px] font-mono text-foreground">
+                          {policy.matchType}: {Array.isArray(policy.matchValue) ? policy.matchValue.join(", ") : policy.matchValue}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Preview */}
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Action</span>
+                      <div className={`px-2.5 py-2 rounded-lg border border-border/30 ${actionBadgeColor(policy.actionType)}`}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-semibold uppercase">{policy.actionType}</span>
+                        </div>
+                        {policy.actionType === "block" && policy.actionConfig.message && (
+                          <p className="text-[10px] mt-1 opacity-70">&quot;{policy.actionConfig.message}&quot;</p>
                         )}
                       </div>
                     </div>
-                    {policy.conditions.length > 1 && (
-                      <Button variant="ghost" size="icon" onClick={() => removeCondition(idx)} className="text-destructive">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+
+                    {/* Distilled Prompt Preview */}
+                    {policy.distilled_prompt && (
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">LLM Guidance</span>
+                        <div className="px-2.5 py-1.5 rounded-lg bg-primary/5 border border-primary/10 text-[11px] text-foreground italic">
+                          &quot;{policy.distilled_prompt}&quot;
+                        </div>
+                      </div>
                     )}
-                  </div>
-                ))}
-                <Button variant="outline" onClick={addCondition} className="w-full">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Condition
-                </Button>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Step 3: Match — WHAT content does this policy check?</CardTitle>
-                <CardDescription>
-                  Match controls <strong>what content</strong> triggers the policy action. While &quot;Conditions&quot; above filters by user identity, Match filters by the actual content — the query text, chunk metadata, or answer fields. If both Conditions and Match are set, the user must match the Conditions AND the content must match here for the policy to fire.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-slate-50/80 border border-slate-200/60 rounded-lg p-3 text-xs text-slate-500 space-y-1 mb-2">
-                  {policy.stage === "pre_query" && (
-                    <>
-                      <p className="font-medium">Pre-Query Match — Blocked Terms:</p>
-                      <p>Set <strong>Match Field</strong> to <code>query.text</code> and enter keywords to block in <strong>Match Value</strong>. These become the &quot;blocked terms&quot; list. The system uses multi-layered detection (exact match, Unicode normalization, fuzzy matching for typos, and phonetic matching) to catch evasion attempts like &quot;s.a.l.a.r.y&quot;, &quot;salarry&quot;, or leetspeak &quot;$alary&quot;.</p>
-                      <p className="italic">Example: Match Field = <code>query.text</code>, Match Value = <code>salary, compensation, CTC</code></p>
-                    </>
-                  )}
-                  {policy.stage === "pre_retrieval" && (
-                    <>
-                      <p className="font-medium">Pre-Retrieval Match — Request Filters:</p>
-                      <p>Match against request parameters to decide whether to inject additional vector DB filters. Typically used with <code>request.index</code> or <code>request.filters</code>.</p>
-                      <p className="italic">Example: Match Field = <code>request.index</code>, Match Value = <code>hr-documents</code></p>
-                    </>
-                  )}
-                  {policy.stage === "post_retrieval" && (
-                    <>
-                      <p className="font-medium">Post-Retrieval Match — Chunk Metadata:</p>
-                      <p>Match against retrieved chunk metadata to decide which chunks to keep, drop, or redact. Use <code>chunk.tags_any</code> to match any tag, or <code>chunk.metadata.sensitivity</code> for sensitivity levels.</p>
-                      <p className="italic">Example: Match Field = <code>chunk.metadata.sensitivity</code>, Match Value = <code>confidential</code></p>
-                    </>
-                  )}
-                  {policy.stage === "post_generation" && (
-                    <>
-                      <p className="font-medium">Post-Generation Match — Answer Validation:</p>
-                      <p>Match against the LLM&apos;s generated answer. Use <code>answer.text</code> to check for banned keywords in the response, or <code>answer.confidence</code> and <code>answer.citations</code> for quality enforcement.</p>
-                      <p className="italic">Example: Match Field = <code>answer.text</code>, Match Value = <code>salary, SSN</code> (blocks answers that mention these words)</p>
-                    </>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Match Field</Label>
-                    <Input value={policy.matchType} onChange={(e) => setPolicy({ ...policy, matchType: e.target.value })} placeholder={getMatchFieldsForStage()[0] || "e.g., query.text"} list="match-suggestions" />
-                    <datalist id="match-suggestions">
-                      {getMatchFieldsForStage().map((f) => (<option key={f} value={f} />))}
-                    </datalist>
-                    <p className="text-xs text-muted-foreground">Start typing to see suggestions. The available fields depend on the Stage selected above.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Match Value (comma-separated for list)</Label>
-                    <Input
-                      value={Array.isArray(policy.matchValue) ? policy.matchValue.join(", ") : policy.matchValue}
-                      onChange={(e) => setPolicy({
-                        ...policy,
-                        matchValue: e.target.value.includes(",") ? e.target.value.split(",").map((s) => s.trim()) : e.target.value,
-                      })}
-                      placeholder='salary, PAN or ["salary", "PAN"]'
-                    />
-                    <p className="text-xs text-muted-foreground">Enter one or more values. Use commas to separate multiple terms. Leave empty to skip content matching (policy will fire based on Conditions alone).</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Step 4: Action — WHAT happens when the policy fires?</CardTitle>
-                <CardDescription>
-                  The action defines the enforcement outcome. When both Conditions (Step 2) and Match (Step 3) are satisfied, this action executes. Different actions are suited to different stages — the descriptions below guide you on which to use where.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Action Type</Label>
-                  <select className="w-full h-10 px-3 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={policy.actionType} onChange={(e) => setPolicy({ ...policy, actionType: e.target.value as PolicyForm["actionType"], actionConfig: {} })}>
-                    <option value="block">Block — Reject the request entirely</option>
-                    <option value="rewrite">Rewrite — Inject metadata filters into the retrieval request</option>
-                    <option value="filter">Filter — Drop or keep specific document chunks</option>
-                    <option value="redact">Redact — Mask PII patterns in text</option>
-                    <option value="enforce">Enforce — Require citations or minimum confidence</option>
-                  </select>
-                  <div className="bg-slate-50/80 border border-slate-200/60 rounded-lg p-3 text-xs text-slate-500 space-y-1 mt-1">
-                    {policy.actionType === "block" && (
-                      <>
-                        <p className="font-medium">Block — Best for Pre-Query and Post-Generation stages.</p>
-                        <p>Completely rejects the request and returns an error message to the user. At Pre-Query, this stops the query before any documents are retrieved. At Post-Generation, this discards the LLM&apos;s answer if it contains forbidden content.</p>
-                        <p className="italic">Use case: &quot;Interns cannot ask about salary data&quot; or &quot;Block any answer that mentions SSN numbers.&quot;</p>
-                      </>
-                    )}
-                    {policy.actionType === "rewrite" && (
-                      <>
-                        <p className="font-medium">Rewrite — Best for Pre-Retrieval stage.</p>
-                        <p>Silently adds metadata filters to the vector DB search query. The user&apos;s question stays the same, but the documents returned are narrowed to only those matching the injected filters. Use <code>{`\${user.department}`}</code> syntax to dynamically insert user attributes.</p>
-                        <p className="italic">Use case: &quot;Each user should only retrieve documents from their own department.&quot;</p>
-                      </>
-                    )}
-                    {policy.actionType === "filter" && (
-                      <>
-                        <p className="font-medium">Filter — Best for Post-Retrieval stage.</p>
-                        <p>After documents are retrieved, this action drops chunks that match <strong>Drop If</strong> conditions or keeps only those matching <strong>Keep If</strong>. Conditions are checked against each chunk&apos;s metadata tags and sensitivity level.</p>
-                        <p className="italic">Use case: &quot;Drop all chunks tagged as confidential&quot; or &quot;Keep only public chunks for guest users.&quot;</p>
-                      </>
-                    )}
-                    {policy.actionType === "redact" && (
-                      <>
-                        <p className="font-medium">Redact — Works at Post-Retrieval and Post-Generation stages.</p>
-                        <p><strong>Patterns</strong> are named PII types that get masked with &quot;[REDACTED]&quot;. Supported patterns: <code>EMAIL</code>, <code>PHONE</code>, <code>SSN</code>, <code>PAN</code>, <code>AADHAAR</code>, <code>CREDIT_CARD</code>, <code>IP_ADDRESS</code>.</p>
-                        <p><strong>Fields</strong> are metadata field names on chunks that should be blanked out entirely (e.g., remove <code>employee_name</code> from chunk metadata).</p>
-                        <p className="italic">Use case: &quot;Mask all email addresses and phone numbers before the LLM sees the chunks.&quot;</p>
-                      </>
-                    )}
-                    {policy.actionType === "enforce" && (
-                      <>
-                        <p className="font-medium">Enforce — Best for Post-Generation stage.</p>
-                        <p>Validates quality of the LLM&apos;s answer. <strong>Min Citations</strong> requires the answer to reference at least N source documents. <strong>Min Confidence</strong> requires the LLM&apos;s self-reported confidence score to be above the threshold (0.0 to 1.0). If either check fails, the answer is blocked.</p>
-                        <p className="italic">Use case: &quot;Every answer must cite at least 2 sources and have confidence above 0.7.&quot;</p>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {policy.actionType === "block" && (
-                  <div className="space-y-2">
-                    <Label>Block Message</Label>
-                    <Input value={policy.actionConfig.message || ""} onChange={(e) => setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, message: e.target.value } })} placeholder="Restricted topic for your role." />
-                    <p className="text-xs text-muted-foreground">This message is shown to the end user when their query is blocked. Keep it clear and non-revealing.</p>
-                  </div>
-                )}
-
-                {policy.actionType === "rewrite" && (
-                  <div className="space-y-2">
-                    <Label>Add Filters (JSON)</Label>
-                    <textarea className="w-full h-24 p-2 font-mono text-sm border border-slate-200 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={JSON.stringify(policy.actionConfig.filters || {}, null, 2)}
-                      onChange={(e) => { try { setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, filters: JSON.parse(e.target.value) } }); } catch {} }}
-                      placeholder='{"department": "${user.department}"}' />
-                    <p className="text-xs text-muted-foreground">JSON object of key-value filters injected into the vector DB query. Use <code>{`\${user.field}`}</code> to dynamically substitute user attributes.</p>
-                  </div>
-                )}
-
-                {policy.actionType === "filter" && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Keep If (JSON)</Label>
-                      <textarea className="w-full h-24 p-2 font-mono text-sm border border-slate-200 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={JSON.stringify(policy.actionConfig.keep_if || {}, null, 2)}
-                        onChange={(e) => { try { setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, keep_if: JSON.parse(e.target.value) } }); } catch {} }}
-                        placeholder='{"sensitivity": "public"}' />
-                      <p className="text-xs text-muted-foreground">Only chunks with metadata matching these key-value pairs survive. Others are dropped.</p>
+                    {/* Flow Visualization */}
+                    <div className="pt-3 border-t border-border/40">
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Query Flow</span>
+                      <div className="mt-2 flex items-center gap-1.5">
+                        {PIPELINE_STAGES.map((s) => (
+                          <div key={s.key} className={`flex-1 h-2 rounded-full transition-all duration-300 ${
+                            policy.stage === s.key ? "bg-primary" : "bg-secondary"
+                          }`} />
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-1.5">
+                        Policy fires at <span className="text-primary font-medium">{policy.stage.replace("_", "-")}</span> stage
+                      </p>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Drop If (JSON)</Label>
-                      <textarea className="w-full h-24 p-2 font-mono text-sm border border-slate-200 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" value={JSON.stringify(policy.actionConfig.drop_if || {}, null, 2)}
-                        onChange={(e) => { try { setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, drop_if: JSON.parse(e.target.value) } }); } catch {} }}
-                        placeholder='{"sensitivity": "confidential"}' />
-                      <p className="text-xs text-muted-foreground">Chunks with metadata matching these key-value pairs are removed before the LLM sees them.</p>
-                    </div>
-                  </div>
-                )}
-
-                {policy.actionType === "redact" && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Patterns (comma-separated)</Label>
-                      <Input value={Array.isArray(policy.actionConfig.patterns) ? policy.actionConfig.patterns.join(", ") : ""}
-                        onChange={(e) => setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, patterns: e.target.value.split(",").map((s) => s.trim()) } })}
-                        placeholder="EMAIL, PHONE, PAN" />
-                      <p className="text-xs text-muted-foreground">Named PII types to detect and replace with [REDACTED]. Available: EMAIL, PHONE, SSN, PAN, AADHAAR, CREDIT_CARD, IP_ADDRESS.</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Fields (comma-separated)</Label>
-                      <Input value={Array.isArray(policy.actionConfig.fields) ? policy.actionConfig.fields.join(", ") : ""}
-                        onChange={(e) => setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, fields: e.target.value.split(",").map((s) => s.trim()) } })}
-                        placeholder="employee_name, amount" />
-                      <p className="text-xs text-muted-foreground">Metadata field names on document chunks to blank out entirely (set to empty string).</p>
-                    </div>
-                  </div>
-                )}
-
-                {policy.actionType === "enforce" && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Min Citations</Label>
-                      <Input type="number" value={policy.actionConfig.citations?.min || 0}
-                        onChange={(e) => setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, citations: { min: parseInt(e.target.value) || 0 } } })} />
-                      <p className="text-xs text-muted-foreground">The LLM&apos;s answer must reference at least this many source documents. Set 0 to skip this check.</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Min Confidence</Label>
-                      <Input type="number" step="0.01" value={policy.actionConfig.min_confidence || 0}
-                        onChange={(e) => setPolicy({ ...policy, actionConfig: { ...policy.actionConfig, min_confidence: parseFloat(e.target.value) || 0 } })} />
-                      <p className="text-xs text-muted-foreground">The answer&apos;s confidence score must be at least this value (0.0 to 1.0). Set 0 to skip this check.</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Step 5: Distilled Prompt — Soft guidance for the LLM</CardTitle>
-                <CardDescription>
-                  This is a natural-language instruction that gets injected into the LLM&apos;s system prompt at runtime. Unlike the hard rules above (which block/redact mechanically), this &quot;nudges&quot; the LLM to follow the spirit of the policy in its own words. The LLM reads this as part of its instructions when generating an answer.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="bg-slate-50/80 border border-slate-200/60 rounded-lg p-3 text-xs text-slate-500 space-y-1">
-                  <p className="font-medium">When is this used?</p>
-                  <p>The distilled prompt is collected from all policies whose Conditions (Step 2) match the current user. It is sent to the LLM as part of the system message, alongside the retrieved document chunks. This adds a layer of &quot;soft enforcement&quot; — even if the hard rules don&apos;t block the query, the LLM is instructed to be careful.</p>
-                  <p className="font-medium mt-2">Tips for writing a good distilled prompt:</p>
-                  <p>- Be specific and direct: <em>&quot;Do not reveal salary figures for named individuals&quot;</em> is better than <em>&quot;Be careful about sensitive topics.&quot;</em></p>
-                  <p>- Frame it as a rule: <em>&quot;You must not disclose personal contact information such as phone numbers or email addresses.&quot;</em></p>
-                  <p>- Keep it under 2 sentences. Long prompts dilute the LLM&apos;s attention.</p>
-                  <p className="font-medium mt-2">This field is optional.</p>
-                  <p>Leave it empty if the hard action (block/redact/filter) alone is sufficient and you don&apos;t need the LLM to adjust its behavior.</p>
-                </div>
-                <textarea className="w-full h-24 p-3 border border-slate-200 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors resize-none" value={policy.distilled_prompt} onChange={(e) => setPolicy({ ...policy, distilled_prompt: e.target.value })}
-                  placeholder="Do not answer about compensation/salaries of specific individuals." />
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
+
           <TabsContent value="yaml">
             <Card>
-              <CardHeader>
-                <CardTitle>Generated YAML</CardTitle>
-                <CardDescription>
-                  This is the raw policy definition auto-generated from the Visual Builder. You can edit it directly here for advanced configurations (like setting a custom <code>fuzzy_threshold</code> for pre-query blocking). Changes here are saved as-is — the visual builder and YAML are independent views.
+              <CardHeader className="py-4">
+                <CardTitle className="text-sm">Generated YAML</CardTitle>
+                <CardDescription className="text-[11px]">
+                  Raw policy definition. Edit directly for advanced configurations.
                 </CardDescription>
               </CardHeader>
               <CardContent>

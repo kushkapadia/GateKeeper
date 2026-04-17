@@ -6,7 +6,7 @@ const Tabs = ({ className, value, onValueChange, children }: any) => {
     <div className={cn("w-full", className)}>
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child, { value, onValueChange } as any);
+          return React.cloneElement(child, { _selectedValue: value, _onValueChange: onValueChange } as any);
         }
         return child;
       })}
@@ -14,29 +14,37 @@ const Tabs = ({ className, value, onValueChange, children }: any) => {
   );
 };
 
-const TabsList = ({ className, children, ...props }: any) => {
+const TabsList = ({ className, children, _selectedValue, _onValueChange, ...props }: any) => {
   return (
     <div
       className={cn(
-        "inline-flex h-10 items-center justify-center rounded-lg bg-slate-100 p-1 text-slate-500",
+        "inline-flex h-9 items-center justify-center rounded-lg bg-secondary p-1 text-muted-foreground",
         className
       )}
       {...props}
     >
-      {children}
+      {React.Children.map(children, (child) => {
+        if (React.isValidElement(child)) {
+          return React.cloneElement(child, { _selectedValue, _onValueChange } as any);
+        }
+        return child;
+      })}
     </div>
   );
 };
 
-const TabsTrigger = ({ className, value, children, ...props }: any) => {
-  const isActive = props["data-state"] === "active";
+const TabsTrigger = ({ className, value, children, _selectedValue, _onValueChange, ...props }: any) => {
+  const isActive = _selectedValue === value;
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-        isActive && "bg-white text-slate-900 shadow-sm",
+        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-[13px] font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
+        isActive
+          ? "bg-card text-foreground shadow-sm"
+          : "text-muted-foreground hover:text-foreground",
         className
       )}
+      onClick={() => _onValueChange?.(value)}
       {...props}
     >
       {children}
@@ -44,13 +52,11 @@ const TabsTrigger = ({ className, value, children, ...props }: any) => {
   );
 };
 
-const TabsContent = ({ className, children, ...props }: any) => {
+const TabsContent = ({ className, value, children, _selectedValue, _onValueChange, ...props }: any) => {
+  if (_selectedValue !== value) return null;
   return (
     <div
-      className={cn(
-        "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        className
-      )}
+      className={cn("mt-3", className)}
       {...props}
     >
       {children}
@@ -59,4 +65,3 @@ const TabsContent = ({ className, children, ...props }: any) => {
 };
 
 export { Tabs, TabsList, TabsTrigger, TabsContent };
-
